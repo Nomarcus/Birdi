@@ -445,6 +445,7 @@
     let trees = []; // NYTT
     let twigPile = []; // NYTT
     let birdNest = null; // NYTT
+    let grassBlades = [];
     
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -797,26 +798,35 @@
         this.height = height;
         this.y = GROUND_Y - this.height;
         this.canopyRadius = this.width * 2.5;
-        this.color = `hsl(120, 60%, ${20 + Math.random() * 10}%)`;
+        this.canopyCenterY = this.y - this.canopyRadius * 0.25;
+        this.trunkColor = '#5D4037';
+        this.canopyRingColor = `hsl(120, 55%, ${32 + Math.random() * 6}%)`;
+        this.canopyCoreColor = `hsl(90, 50%, ${60 + Math.random() * 8}%)`;
+        this.canopyOutlineColor = `hsl(120, 45%, ${24 + Math.random() * 6}%)`;
+        this.ringWidth = this.canopyRadius * 0.55;
       }
       draw() {
-        // Stam
-        ctx.fillStyle = '#5D4037';
+        const centerX = this.x + this.width / 2;
+
+        ctx.fillStyle = this.trunkColor;
         ctx.fillRect(this.x, this.y, this.width, this.height);
-        
-        // Lövverk
-        ctx.fillStyle = this.color;
+
+        ctx.strokeStyle = this.canopyRingColor;
+        ctx.lineWidth = this.ringWidth;
         ctx.beginPath();
-        ctx.arc(this.x + this.width / 2, this.y, this.canopyRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `hsl(120, 60%, ${30 + Math.random() * 10}%)`;
+        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = this.canopyCoreColor;
         ctx.beginPath();
-        ctx.arc(this.x + this.width / 2 - this.canopyRadius / 2, this.y - this.canopyRadius / 3, this.canopyRadius * 0.8, 0, Math.PI * 2);
+        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius * 0.35, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `hsl(120, 60%, ${35 + Math.random() * 10}%)`;
+
+        ctx.strokeStyle = this.canopyOutlineColor;
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(this.x + this.width / 2 + this.canopyRadius / 2, this.y - this.canopyRadius / 3, this.canopyRadius * 0.8, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
+        ctx.stroke();
       }
     }
     
@@ -1604,10 +1614,28 @@
       }
       
       predNests = [];
-      for (let i = 0; i < PRED_COUNT; i++) {
-        const x = canvas.width - 120 - (i % 2) * 150;
-        const y = 150 + Math.floor(i / 2) * 230;
-        predNests.push(new PredatorNest(x, y));
+      const nestCenterX = canvas.width - 220;
+      const nestOffsetX = 90;
+      const nestStartY = 160;
+      const nestSpacingY = 200;
+      let nestsPlaced = 0;
+      let row = 0;
+      while (nestsPlaced < PRED_COUNT) {
+        const remaining = PRED_COUNT - nestsPlaced;
+        const y = nestStartY + row * nestSpacingY;
+        if (remaining === 1) {
+          predNests.push(new PredatorNest(nestCenterX, y));
+          nestsPlaced += 1;
+        } else {
+          predNests.push(new PredatorNest(nestCenterX - nestOffsetX, y));
+          if (nestsPlaced + 1 < PRED_COUNT) {
+            predNests.push(new PredatorNest(nestCenterX + nestOffsetX, y));
+            nestsPlaced += 2;
+          } else {
+            nestsPlaced += 1;
+          }
+        }
+        row++;
       }
       
       // NYTT: Init Träd
@@ -1621,14 +1649,24 @@
       }
       
       // NYTT: Init Bo & Kvistar
-      birdNest = new BirdNest(100, 100); // Uppe till vänster
+      birdNest = new BirdNest(150, 130); // Uppe till vänster
       twigPile = [];
-      const pileX = canvas.width - 150;
-      const pileY = GROUND_Y - 30;
+      const pileX = canvas.width - 180;
+      const pileY = GROUND_Y - 8;
       for (let i = 0; i < TWIG_PILE_COUNT; i++) {
-        twigPile.push(new Twig(pileX + Math.random() * 80 - 40, pileY + Math.random() * 20 - 10));
+        const twigY = Math.min(GROUND_Y - 5, pileY + Math.random() * 18 - 9);
+        twigPile.push(new Twig(pileX + Math.random() * 80 - 40, twigY));
       }
       twigsInNest = 0;
+
+      grassBlades = [];
+      for (let x = 0; x < canvas.width; x += 6) {
+        grassBlades.push({
+          x,
+          width: 3 + Math.random() * 2,
+          height: 8 + Math.random() * 12
+        });
+      }
     }
     
     function initBirds() {
@@ -1820,10 +1858,9 @@
       ctx.fillRect(0, GROUND_Y, canvas.width, 50);
       
       ctx.fillStyle = '#6B8E23';
-      for (let i = 0; i < canvas.width; i += 10) {
-        const h = 8 + Math.random() * 12;
-        ctx.fillRect(i, GROUND_Y - h, 5, h);
-      }
+      grassBlades.forEach(blade => {
+        ctx.fillRect(blade.x, GROUND_Y - blade.height, blade.width, blade.height);
+      });
       
       // UPPDATERAD Rit-ordning
       hideSpots.forEach(h => h.draw());
@@ -1869,6 +1906,7 @@
       trees = []; // NYTT
       twigPile = []; // NYTT
       birdNest = null; // NYTT
+      grassBlades = [];
       
       initEnvironment();
       initBirds();
