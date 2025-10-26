@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7fc6f4"/>
+      <stop offset="60%" stop-color="#aee2ff"/>
+      <stop offset="100%" stop-color="#d9f4ff"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9ad07f"/>
+      <stop offset="100%" stop-color="#6ea75a"/>
+    </linearGradient>
+    <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8c5a39"/>
+      <stop offset="100%" stop-color="#5b3924"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#ffe89a"/>
+      <stop offset="80%" stop-color="#ffdd5a"/>
+      <stop offset="100%" stop-color="#fbc531"/>
+    </radialGradient>
+  </defs>
+  <rect width="1800" height="900" fill="url(#sky)"/>
+  <g fill="#fff" opacity="0.82">
+    <path d="M270 210c64-70 196-70 260 0 76-36 160-24 202 24-64-14-120 0-140 36-30-32-86-42-134-18-62-74-160-82-188-42z"/>
+    <path d="M720 180c60-58 180-58 240 0 68-34 146-24 188 18-60-10-112 2-132 34-30-30-80-42-122-22-58-62-146-66-174-30z"/>
+    <path d="M1180 220c54-48 152-48 206 0 60-26 126-20 162 20-50-12-96 0-114 28-26-26-70-36-106-16-48-54-128-56-148-12z"/>
+  </g>
+  <circle cx="260" cy="170" r="70" fill="url(#sun)"/>
+  <g stroke="#f4c542" stroke-width="6" stroke-linecap="round" opacity="0.6">
+    <line x1="260" y1="70" x2="260" y2="110"/>
+    <line x1="260" y1="230" x2="260" y2="270"/>
+    <line x1="160" y1="170" x2="200" y2="170"/>
+    <line x1="320" y1="170" x2="360" y2="170"/>
+    <line x1="200" y1="120" x2="228" y2="140"/>
+    <line x1="292" y1="200" x2="320" y2="220"/>
+    <line x1="228" y1="200" x2="200" y2="220"/>
+    <line x1="292" y1="120" x2="320" y2="140"/>
+  </g>
+  <path d="M0 620c180-60 360-80 560-60 200 20 360 80 520 80s320-40 480-60c160-20 320-20 440 20v300H0z" fill="url(#ground)"/>
+  <path d="M0 820c180-40 360-40 560-10 200 30 360 50 520 30s320-70 480-60c160 10 320 70 440 90v30H0z" fill="url(#soil)"/>
+  <g fill="#5f8b3d">
+    <rect x="140" y="760" width="12" height="60" rx="6"/>
+    <rect x="480" y="748" width="14" height="80" rx="7"/>
+    <rect x="780" y="770" width="10" height="54" rx="5"/>
+    <rect x="1120" y="758" width="16" height="72" rx="8"/>
+    <rect x="1480" y="742" width="12" height="78" rx="6"/>
+  </g>
+</svg>
