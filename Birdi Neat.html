@@ -1515,9 +1515,9 @@
         // Energibar
         const ep = Math.min(1, this.energy / this.maxEnergy); // FIX: Garantera max 1
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(-16, -18, 32, 3);
+        ctx.fillRect(-9, -18, 18, 3);
         ctx.fillStyle = ep > 0.95 ? '#4CAF50' : ep > 0.25 ? '#FFA500' : '#FF4444';
-        ctx.fillRect(-16, -18, 32 * ep, 3);
+        ctx.fillRect(-9, -18, 18 * ep, 3);
         
         ctx.restore();
       }
@@ -1573,9 +1573,9 @@
         
         const ep = Math.min(1, this.energy / this.maxEnergy); // FIX: Garantera max 1
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(-16, -18, 32, 3);
+        ctx.fillRect(-9, -18, 18, 3);
         ctx.fillStyle = ep > 0.5 ? '#4CAF50' : ep > 0.25 ? '#FFA500' : '#FF4444';
-        ctx.fillRect(-16, -18, 32 * ep, 3);
+        ctx.fillRect(-9, -18, 18 * ep, 3);
         
         if (this.kills > 0) {
           ctx.fillStyle = '#FFD700';
