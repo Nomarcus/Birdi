@@ -442,6 +442,14 @@
     const TWIG_IDLE_PENALTY = 2;
     const TWIG_IDLE_INTERVAL = 45;
     const TWIG_DEATH_RATIO = 0.3;
+
+    const GROUND_PENALTY_ENERGY = 20;
+    const GROUND_PENALTY_STAMINA = 12;
+    const GROUND_PENALTY_BASE = 420;
+    const WALL_PENALTY_ENERGY = 12;
+    const WALL_PENALTY_BASE = 220;
+    const CEILING_PENALTY_ENERGY = 14;
+    const CEILING_PENALTY_BASE = 260;
     
     // CRITICAL for evolution!
     let MAX_HIDE_TIME = 180; // Max 3 seconds in a hide spot (longer time to rest)
@@ -1195,8 +1203,8 @@
       constructor(type, brain) {
         this.type = type;
         this.typeData = BIRD_TYPES[type];
-        // UPDATED Brain: 33 inputs, 4 outputs
-        this.brain = brain || new Brain(33, BIRD_HIDDEN, 4);
+        // UPDATED Brain: 37 inputs, 4 outputs
+        this.brain = brain || new Brain(37, BIRD_HIDDEN, 4);
         this.reset();
       }
       reset() {
@@ -1221,6 +1229,9 @@
         this.twigLastDist = null;
         this.twigCarryTime = 0;
         this.trail = [];
+        this.groundContact = 0;
+        this.wallContact = 0;
+        this.ceilingContact = 0;
       }
       think() {
         if (!this.alive || this.hiding) return;
@@ -1318,8 +1329,12 @@
         const rightTreeNorm = normDist(rightTree);
         const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y);
         const wallDistNorm = normDist(wallDist);
+        const leftWallNorm = normDist(this.x);
+        const rightWallNorm = normDist(canvas.width - this.x);
+        const ceilingDistNorm = normDist(this.y);
+        const groundDistNorm = normDist(GROUND_Y - this.y);
 
-        // UPPDATERAD: 33 inputs
+        // UPPDATERAD: 37 inputs
         const inputs = [
           this.x / canvas.width,
           this.y / canvas.height,
@@ -1354,7 +1369,11 @@
           frontTreeNorm, // 30
           leftTreeNorm, // 31
           rightTreeNorm, // 32
-          wallDistNorm // 33
+          wallDistNorm, // 33
+          leftWallNorm, // 34
+          rightWallNorm, // 35
+          ceilingDistNorm, // 36
+          groundDistNorm // 37
         ];
 
         // UPDATED: 4 outputs
@@ -1498,10 +1517,15 @@
         this.y += this.vy;
         
         // Wall collision
-        if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx); }
-        if (this.x > canvas.width) { this.x = canvas.width; this.vx = -Math.abs(this.vx); }
-        if (this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); }
-        if (this.y > GROUND_Y) { this.y = GROUND_Y; this.vy = -Math.abs(this.vy) * 0.6; }
+        let hitLeftWall = false;
+        let hitRightWall = false;
+        let hitCeiling = false;
+        let hitGround = false;
+
+        if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx); hitLeftWall = true; }
+        if (this.x > canvas.width) { this.x = canvas.width; this.vx = -Math.abs(this.vx); hitRightWall = true; }
+        if (this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); hitCeiling = true; }
+        if (this.y > GROUND_Y) { this.y = GROUND_Y; this.vy = -Math.abs(this.vy) * 0.6; hitGround = true; }
         
         // NEW: Tree collision
         for (const tree of trees) {
@@ -1525,6 +1549,40 @@
               }
             }
           }
+        }
+
+        if (hitLeftWall || hitRightWall) {
+          this.wallContact++;
+          const contactSeverity = 1 + this.wallContact * 0.2;
+          this.fitness -= WALL_PENALTY_BASE * contactSeverity;
+          this.energy = Math.max(0, this.energy - WALL_PENALTY_ENERGY * contactSeverity);
+        } else {
+          this.wallContact = 0;
+        }
+
+        if (hitCeiling) {
+          this.ceilingContact++;
+          const severity = 1 + this.ceilingContact * 0.3;
+          this.fitness -= CEILING_PENALTY_BASE * severity;
+          this.energy = Math.max(0, this.energy - CEILING_PENALTY_ENERGY * severity);
+          this.stamina = Math.max(0, this.stamina - 4 * severity);
+        } else if (this.y <= 10) {
+          // Close to the ceiling without a direct hit still hurts
+          this.ceilingContact = Math.max(0, this.ceilingContact - 1);
+          this.fitness -= CEILING_PENALTY_BASE * 0.2;
+        } else {
+          this.ceilingContact = 0;
+        }
+
+        const groundGap = GROUND_Y - this.y;
+        if (hitGround || groundGap <= 4) {
+          this.groundContact++;
+          const severity = 1 + Math.max(0, 4 - groundGap) * 0.8 + this.groundContact * 0.25;
+          this.fitness -= GROUND_PENALTY_BASE * severity;
+          this.energy = Math.max(0, this.energy - GROUND_PENALTY_ENERGY * severity);
+          this.stamina = Math.max(0, this.stamina - GROUND_PENALTY_STAMINA * severity);
+        } else {
+          this.groundContact = 0;
         }
 
         if (this.trail.length > 25) {
