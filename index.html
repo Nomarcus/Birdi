@@ -1270,7 +1270,7 @@
         let closestPred = null;
         let minPredDist = Infinity;
         for (const p of predators) {
-          if (p.inNest) continue;
+          if (!p.alive || p.inNest) continue;
           const d = Math.hypot(this.x - p.x, this.y - p.y);
           if (d < minPredDist) {
             minPredDist = d;
@@ -1804,6 +1804,7 @@
         this.homeNest = nest;
         this.vx = 0;
         this.vy = 0;
+        this.alive = true;
         this.inNest = true;
         this.energy = 30;
         this.maxEnergy = 60;
@@ -1819,6 +1820,7 @@
         this.cornerStall = 0;
       }
       update() {
+        if (!this.alive) return;
         if (this.vx > 0.1) this.facing = 1;
         else if (this.vx < -0.1) this.facing = -1;
 
@@ -1841,6 +1843,7 @@
         }
 
         this.energy -= 0.6;
+        if (this.checkEnergy()) return;
         if (this.wallCrashTimer > 0) this.wallCrashTimer--;
         if (this.forcedReturn > 0) this.forcedReturn--;
 
@@ -1860,7 +1863,7 @@
         let packMates = 0;
         if (PACK_HUNT && target) {
           for (const p of predators) {
-            if (p === this || p.inNest) continue;
+            if (p === this || p.inNest || !p.alive) continue;
             const d = Math.hypot(this.x - p.x, this.y - p.y);
             if (d < 200) packMates++;
           }
@@ -1917,6 +1920,7 @@
         } else {
           this.cornerStall = Math.max(0, this.cornerStall - 1);
         }
+        if (this.checkEnergy()) return;
         if (this.cornerStall > 18) {
           this.forcedReturn = Math.max(this.forcedReturn, Math.floor(PRED_WALL_FORCED_RETURN * 0.6));
         }
@@ -1979,24 +1983,30 @@
           this.x = 12;
           this.vx = Math.abs(this.vx) * 0.25;
           this.applyWallCrash();
+          if (!this.alive) return;
         }
         if (this.x > canvas.width - 12) {
           this.x = canvas.width - 12;
           this.vx = -Math.abs(this.vx) * 0.25;
           this.applyWallCrash();
+          if (!this.alive) return;
         }
         if (this.y < 12) {
           this.y = 12;
           this.vy = Math.abs(this.vy) * 0.25;
           this.applyWallCrash();
+          if (!this.alive) return;
         }
         if (this.y > GROUND_Y - 12) {
           this.y = GROUND_Y - 12;
-          this.vy = -Math.abs(this.vy) * 0.3;
-          this.applyWallCrash();
+          this.vx = 0;
+          this.vy = 0;
+          this.die('ground');
+          return;
         }
 
         this.energy = Math.max(0, this.energy);
+        if (this.checkEnergy()) return;
 
         // NEW: Tree collision for predator
         for (const tree of trees) {
@@ -2099,7 +2109,7 @@
         }
 
         this.prevTargetDist = (target && target.alive) ? Math.hypot(this.x - target.x, this.y - target.y) : null;
-        
+
         if (wantNest || forcedRecall || this.energy < this.maxEnergy * 0.5) {
           if (distToNest < this.homeNest.radius) {
             this.inNest = true;
@@ -2111,11 +2121,39 @@
         }
       }
 
+      die(cause = 'exhaustion') {
+        if (!this.alive) return;
+        this.alive = false;
+        this.inNest = false;
+        this.vx = 0;
+        this.vy = 0;
+        this.energy = 0;
+        this.fitness = Math.max(0, this.fitness - 400);
+        this.prevTargetDist = null;
+        this.prevNestDist = null;
+        this.forcedReturn = 0;
+        this.wallCrashTimer = 0;
+        this.cornerStall = 0;
+        for (let i = 0; i < 20; i++) {
+          particles.push(new Particle(this.x, this.y, '#9C27B0'));
+        }
+      }
+
+      checkEnergy() {
+        if (this.energy <= 0) {
+          this.die('exhaustion');
+          return true;
+        }
+        return false;
+      }
+
       applyWallCrash() {
+        if (!this.alive) return;
         if (this.wallCrashTimer > 0) return;
         this.fitness -= PRED_WALL_CRASH_FITNESS;
         this.energy = Math.max(0, this.energy - this.maxEnergy * 0.3);
         this.energy = Math.min(this.energy, this.maxEnergy * PRED_WALL_CRASH_ENERGY_RATIO);
+        if (this.checkEnergy()) return;
         this.forcedReturn = Math.max(this.forcedReturn, PRED_WALL_FORCED_RETURN);
         this.huntBonus = Math.max(0, this.huntBonus - 0.1);
         this.cornerStall = Math.max(this.cornerStall, 12);
@@ -2157,6 +2195,7 @@
       }
       
       draw() {
+        if (!this.alive) return;
         // UPPDATERAD: Rita i boet
         if (this.inNest) {
           this.drawInNest();
@@ -2431,7 +2470,7 @@
       document.getElementById('timeValue').textContent = Math.floor(survivalTime / 60) + 's';
       document.getElementById('birdsAlive').textContent = birds.filter(b => b.alive).length;
       document.getElementById('deadThisGen').textContent = deadThisGen;
-      document.getElementById('predsCharging').textContent = predators.filter(p => p.inNest).length;
+      document.getElementById('predsCharging').textContent = predators.filter(p => p.alive && p.inNest).length;
       
       const scouts = birds.filter(b => b.type === 'SCOUT' && b.alive).length;
       const thinkers = birds.filter(b => b.type === 'THINKER' && b.alive).length;
@@ -2490,8 +2529,9 @@
         h.occupants = h.occupants.filter(b => b.hiding);
       });
       
-      const anyAlive = birds.some(b => b.alive);
-      if (!anyAlive && globalTime > 100) { // Small delay
+      const smallBirdsAlive = birds.some(b => b.alive);
+      const predatorsAlive = predators.some(p => p.alive);
+      if (!smallBirdsAlive && !predatorsAlive && globalTime > 100) { // Small delay
         nextGeneration();
       }
     }
