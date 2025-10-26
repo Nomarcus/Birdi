@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEAT Simulation Guide</title>
+  <style>
+    :root {
+      --ink:#1f2933;
+      --bg:#f0f4ff;
+      --card:#ffffff;
+      --accent:#5b8def;
+      --accent-dark:#3a64c2;
+      --muted:#64748b;
+    }
+    *{box-sizing:border-box; margin:0; padding:0;}
+    body{
+      font-family:"Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background:linear-gradient(135deg,#d6e4ff 0%,#f5f9ff 100%);
+      color:var(--ink);
+      line-height:1.6;
+      padding:24px;
+    }
+    header{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      margin-bottom:32px;
+      align-items:flex-start;
+    }
+    header h1{
+      font-size:2.5rem;
+      font-weight:900;
+      color:var(--accent-dark);
+      text-shadow:0 10px 30px rgba(58,100,194,0.18);
+    }
+    header p{
+      max-width:720px;
+      font-size:1.05rem;
+      color:var(--muted);
+    }
+    .button-link{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 22px;
+      border-radius:14px;
+      background:var(--accent);
+      color:#fff;
+      font-weight:700;
+      text-decoration:none;
+      transition:transform .2s ease, box-shadow .2s ease;
+      box-shadow:0 12px 24px rgba(91,141,239,0.2);
+    }
+    .button-link:hover{ transform:translateY(-2px); box-shadow:0 18px 32px rgba(91,141,239,0.25);}    
+    main{ display:grid; gap:28px; }
+    section{ background:var(--card); border-radius:20px; padding:28px; box-shadow:0 20px 45px rgba(31,41,51,0.12);}    
+    section h2{ font-size:1.6rem; margin-bottom:14px; color:var(--accent-dark);}    
+    section h3{ font-size:1.25rem; margin-top:20px; margin-bottom:8px; color:var(--ink);}    
+    p + p{ margin-top:12px; }
+    ul{ margin-top:12px; margin-left:20px; display:grid; gap:10px; }
+    li{ padding-left:4px; }
+    .pill-list{ display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    .pill{ padding:8px 12px; border-radius:999px; background:rgba(91,141,239,0.12); color:var(--accent-dark); font-weight:600; }
+    figure{ display:flex; flex-direction:column; align-items:center; gap:12px; margin:20px 0; }
+    figure img{ max-width:320px; width:100%; filter:drop-shadow(0 18px 30px rgba(91,141,239,0.22)); border-radius:18px; }
+    figure figcaption{ font-size:0.95rem; color:var(--muted); text-align:center; max-width:360px; }
+    .parameter-group{ margin-top:24px; }
+    .parameter-group h3{ border-bottom:3px solid rgba(91,141,239,0.2); padding-bottom:6px; }
+    .parameter-grid{ display:grid; gap:14px; margin-top:14px; }
+    @media (min-width:720px){
+      .parameter-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    .parameter-card{ background:rgba(91,141,239,0.08); padding:16px 18px; border-radius:16px; }
+    .parameter-card strong{ display:block; font-size:1.05rem; margin-bottom:6px; color:var(--accent-dark);}    
+    .parameter-card span{ color:var(--muted); font-size:0.95rem; }
+    .toc{ display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
+    .toc a{ color:var(--accent-dark); font-weight:600; text-decoration:none; background:rgba(91,141,239,0.12); padding:8px 12px; border-radius:999px; }
+    .toc a:hover{ background:rgba(91,141,239,0.18); }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="button-link" href="index.html">⬅️ Back to Simulation</a>
+    <h1>NEAT Survival Simulation Guide</h1>
+    <p>
+      This page explains how the NeuroEvolution of Augmenting Topologies (NEAT) algorithm drives the flock of birds in the
+      simulation, what information their neural networks perceive, and how every exposed parameter shapes the evolving
+      ecosystem.
+    </p>
+    <nav class="toc">
+      <a href="#neat-overview">NEAT Overview</a>
+      <a href="#loop">Evolution Loop</a>
+      <a href="#brains">Neural Inputs & Outputs</a>
+      <a href="#parameters">Parameter Reference</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="neat-overview">
+      <h2>Understanding NEAT</h2>
+      <p>
+        NEAT evolves neural networks by preserving successful behaviours while continually exploring new structures. Each
+        bird in the simulation owns a compact feed-forward brain. The algorithm evaluates an entire generation at once,
+        measures fitness based on survival, successful escapes, nest building, and twig deliveries, and then breeds a new
+        population by combining the most effective genomes with carefully tuned mutations.
+      </p>
+      <p>
+        Unlike static neural networks, NEAT gradually increases complexity. Early generations rely on simple strategies
+        (seeking food, staying alive), while later generations may discover coordinated warning flights, efficient twig
+        routes, or opportunistic hiding patterns. Speciation protects innovative behaviours from being wiped out by random
+        changes, allowing promising ideas to mature over several generations.
+      </p>
+      <div class="pill-list">
+        <span class="pill">Dynamic topology growth</span>
+        <span class="pill">Fitness-driven selection</span>
+        <span class="pill">Mutation & crossover diversity</span>
+        <span class="pill">Behavioural innovation protection</span>
+      </div>
+      <figure>
+        <img src="assets/birdhouse.svg" alt="Illustration of a birdhouse perched on a leafy branch" />
+        <figcaption>The evolving flock must deliver twigs to build this nest. Every branch matters!</figcaption>
+      </figure>
+    </section>
+
+    <section id="loop">
+      <h2>The Evolution Loop</h2>
+      <p>
+        The simulation advances in clear stages that mirror classic NEAT workflows:
+      </p>
+      <ul>
+        <li><strong>Initialisation:</strong> Birds start with randomly weighted brains sharing a common structure. Predators are optional and evolve separately.</li>
+        <li><strong>Simulation Run:</strong> Time steps advance, birds seek food, warn each other, hide, and carry twigs to the nest. Predators hunt and pressure the flock.</li>
+        <li><strong>Fitness Tracking:</strong> Survivors gain fitness over time. Bonuses reward picking up twigs, delivering them, escaping predators, and contributing to record statistics.</li>
+        <li><strong>Generation Reset:</strong> When all birds die (after a short delay), the best genomes are selected. Elite brains pass straight through, a parent pool breeds offspring, and mutations introduce new behaviours.</li>
+      </ul>
+      <p>
+        Parallel predator evolution mirrors the bird loop when progressive evolution is enabled, letting hunters adapt to smarter prey while balancing pressure on the ecosystem.
+      </p>
+    </section>
+
+    <section id="brains">
+      <h2>Neural Inputs & Outputs</h2>
+      <p>
+        Each bird brain receives 33 continuous inputs capturing its environment and internal state. Key signals include:
+      </p>
+      <ul>
+        <li><strong>Energy & stamina metrics:</strong> Current reserves, depletion rates, and warning states help the brain balance risk versus recovery.</li>
+        <li><strong>Spatial awareness:</strong> Relative positions to food, predators, hide spots, trees, and the nest plus wall proximity form a survival map.</li>
+        <li><strong>Social cues:</strong> Counts of nearby birds and alarm waves encourage flocking or dispersal.</li>
+        <li><strong>Nest progress:</strong> Distance to the birdhouse and twig inventory inform whether to gather more materials.</li>
+      </ul>
+      <p>
+        Brains output four continuous signals that the simulation interprets as:
+      </p>
+      <ul>
+        <li><strong>Horizontal thrust</strong> and <strong>vertical thrust</strong> (movement vector).</li>
+        <li><strong>Hide trigger:</strong> activates when output &gt; 0.3 and the bird is eligible to use a hide spot.</li>
+        <li><strong>Twig intent:</strong> activates when output &gt; 0.3 and guides birds toward gathering and delivering nest materials.</li>
+      </ul>
+      <p>
+        Mutation power and hidden neuron counts determine how expressive the brain can become. Increasing hidden neurons lets NEAT discover more nuanced strategies, while mutation controls how quickly behaviours shift between generations.
+      </p>
+    </section>
+
+    <section id="parameters">
+      <h2>Parameter Reference</h2>
+      <p>
+        Fine-tune the simulation using the controls below. Values update live in the heads-up display on the main page.
+      </p>
+
+      <div class="parameter-group">
+        <h3>Core Settings</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>🐦 Total Small Birds</strong><span>Sets the population size for each generation. Higher counts slow evolution but increase diversity.</span></div>
+          <div class="parameter-card"><strong>🦅 Predator Count</strong><span>Number of predators hunting the flock. More predators raise pressure and reward evasive strategies.</span></div>
+          <div class="parameter-card"><strong>🍎 Food Spawn Rate</strong><span>Controls how frequently food appears. Scarce food forces aggressive foraging and prioritises efficiency.</span></div>
+          <div class="parameter-card"><strong>🌳 Hide Spots Count</strong><span>Total safe zones on the map. Hide spots grant short recovery windows.</span></div>
+          <div class="parameter-card"><strong>🏠 Capacity per Hide Spot</strong><span>Maximum birds that can share a hide spot simultaneously.</span></div>
+          <div class="parameter-card"><strong>🌲 Trees (obstacles)</strong><span>Adds environmental obstacles that birds and predators must navigate around.</span></div>
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Nest Building</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>🪵 Twigs in the Pile</strong><span>How many twigs spawn in the central pile. Each twig can be carried only once.</span></div>
+          <div class="parameter-card"><strong>🏆 Fitness Bonus per Twig</strong><span>Reward applied to the carrier when a twig reaches the nest. Higher bonuses favour construction-focused behaviours.</span></div>
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Hide Spot Settings</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>⏱️ Max Hide Time</strong><span>Number of frames a bird may stay hidden before being forced out.</span></div>
+          <div class="parameter-card"><strong>⏳ Cooldown after Hiding</strong><span>Frames that must pass before the same bird can hide again.</span></div>
+          <div class="parameter-card"><strong>😰 Fitness Penalty while Hiding</strong><span>Fitness reduction applied each tick while the bird remains in cover.</span></div>
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Small Bird Evolution</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>Elite % (top survivors kept)</strong><span>Guaranteed proportion of the best birds that pass unchanged into the next generation.</span></div>
+          <div class="parameter-card"><strong>Parent Pool % (eligible to breed)</strong><span>Share of high-performing birds that may contribute genes to offspring.</span></div>
+          <div class="parameter-card"><strong>Mutation Rate %</strong><span>Chance that an individual connection weight mutates during reproduction.</span></div>
+          <div class="parameter-card"><strong>Mutation Power</strong><span>Strength of each mutation. Higher values introduce bolder behavioural swings.</span></div>
+          <div class="parameter-card"><strong>🧠 Hidden Neurons</strong><span>Size of the hidden layer for bird brains. Larger networks support more complex instincts.</span></div>
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Predator Evolution</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>Elite %</strong><span>Top-performing predators that survive unchanged into the next wave.</span></div>
+          <div class="parameter-card"><strong>Parent Pool %</strong><span>Portion of predators eligible to reproduce.</span></div>
+          <div class="parameter-card"><strong>Mutation Rate %</strong><span>Probability of mutating each predator weight.</span></div>
+          <div class="parameter-card"><strong>Mutation Power</strong><span>Magnitude of predator mutations.</span></div>
+          <div class="parameter-card"><strong>🧠 Hidden Neurons</strong><span>Controls the hidden layer size for predator brains.</span></div>
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Balance & Behaviour</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>💨 Stamina Cost</strong><span>Base stamina drain per movement tick. Higher costs punish constant sprinting.</span></div>
+          <div class="parameter-card"><strong>🔋 Energy per Movement</strong><span>Energy spent every update while moving. Combines with stamina to limit reckless flight.</span></div>
+          <div class="parameter-card"><strong>🚨 Warning Boost %</strong><span>Speed multiplier applied when birds receive alarm signals.</span></div>
+          <div class="parameter-card"><strong>🚨 Alarm Radius</strong><span>Range within which warnings propagate to allies.</span></div>
+          <div class="parameter-card"><strong>🍎 Food Energy Value</strong><span>Energy restored by eating a single food particle.</span></div>
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Predator Settings</h3>
+        <div class="parameter-grid">
+          <div class="parameter-card"><strong>⚡ Hunt Speed</strong><span>Maximum chase speed for predators.</span></div>
+          <div class="parameter-card"><strong>🔋 Nest Charge Speed</strong><span>Rate at which predators charge attacks from the nest.</span></div>
+          <div class="parameter-card"><strong>🍖 Energy per Capture</strong><span>Energy predators regain after catching a bird.</span></div>
+          <div class="parameter-card"><strong>💪 Fitness per Capture</strong><span>Fitness rewarded to predators per successful hunt.</span></div>
+          <div class="parameter-card"><strong>📈 Progressive Evolution</strong><span>When enabled, predator difficulty scales alongside bird performance.</span></div>
+          <div class="parameter-card"><strong>🎯 Pack Hunting</strong><span>Lets predators coordinate, increasing pressure on isolated birds.</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
