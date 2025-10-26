@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🦅 NEAT: Evolution genom Jakt (Fixad Balans)</title>
+  <title>🦅 NEAT: Evolution Through Hunting (Balanced Build)</title>
   <style>
     :root { --sky1:#87CEEB; --sky2:#E0F6FF; --panel:#ffffffee; --ink:#23303f; --ok:#28a745; --accent:#0d6efd; --danger:#dc3545; }
     *{box-sizing:border-box; margin:0; padding:0;}
@@ -20,7 +20,8 @@
     .btn-group{ display:flex; gap:12px; flex-wrap:wrap; }
     .btn{ padding:14px 24px; border:0; border-radius:12px; background:var(--ok); color:#fff;
       font-weight:800; cursor:pointer; box-shadow:0 6px 20px rgba(40,167,69,.3);
-      transition:all .2s ease; font-size:15px; }
+      transition:all .2s ease; font-size:15px; display:inline-flex; align-items:center;
+      justify-content:center; gap:8px; text-decoration:none; }
     .btn.secondary{ background:var(--accent); box-shadow:0 6px 20px rgba(13,110,253,.3); }
     .btn.danger{ background:var(--danger); box-shadow:0 6px 20px rgba(220,53,69,.3); }
     .btn:hover{ transform:translateY(-2px); filter:brightness(1.1); }
@@ -75,7 +76,7 @@
       background:rgba(255,255,255,0.4); border-radius:12px; margin-top:16px; }
     .legend-item{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; }
     .legend-dot{ width:16px; height:16px; border-radius:50%; border:3px solid #333; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
-    /* NYTT för legend */
+    /* NEW for legend */
     .legend-line{ width:16px; height:8px; border-radius:4px; border:3px solid #333; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
     .legend-rect{ width:16px; height:16px; border-radius:4px; border:3px solid #333; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
 
@@ -86,17 +87,18 @@
   </style>
 </head>
 <body>
-  <h1>🦅 NEAT EVOLUTION: Bygg Bo & Överlev 🌳</h1>
+  <h1>🦅 NEAT EVOLUTION: Build the Nest & Survive 🌳</h1>
   <canvas id="canvas" width="1800" height="900"></canvas>
 
   <div class="controls">
     <div class="top-bar">
       <div class="btn-group">
-        <button class="btn" id="btnReset">🔄 Ny Simulering</button>
-        <button class="btn secondary" id="btnPause">⏸️ Pausa</button>
+        <button class="btn" id="btnReset">🔄 New Simulation</button>
+        <button class="btn secondary" id="btnPause">⏸️ Pause</button>
+        <a class="btn secondary" href="neat-guide.html">📘 NEAT Guide</a>
       </div>
       <div class="speed-control">
-        <label for="speedSlider">Hastighet</label>
+        <label for="speedSlider">Speed</label>
         <input type="range" id="speedSlider" min="1" max="50" value="1">
         <span class="speed-value" id="speedDisplay">1×</span>
       </div>
@@ -106,72 +108,72 @@
           <div class="score-value ok" id="genValue">1</div>
         </div>
         <div class="score-item">
-          <div class="score-label">Överlevnadstid</div>
+          <div class="score-label">Survival Time</div>
           <div class="score-value" id="timeValue">0s</div>
         </div>
         <div class="score-item">
-          <div class="score-label">🐦 Lever</div>
+          <div class="score-label">🐦 Birds Alive</div>
           <div class="score-value ok" id="birdsAlive">0</div>
         </div>
         <div class="score-item">
-          <div class="score-label">💀 Döda denna gen</div>
+          <div class="score-label">💀 Deaths this Gen</div>
           <div class="score-value danger" id="deadThisGen">0</div>
         </div>
       </div>
     </div>
 
     <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#FFD700;"></div>Scout (Snabb)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#4CAF50;"></div>Thinker (Smart)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FFD700;"></div>Scout (Fast)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4CAF50;"></div>Thinker (Clever)</div>
       <div class="legend-item"><div class="legend-dot" style="background:#2196F3;"></div>Flocker (Social)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#9C27B0;"></div>Fiende (Odödlig)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#3ECF5B;"></div>Gömställe</div>
-      <div class="legend-item"><div class="legend-rect" style="background:#006400;"></div>Träd (Hinder)</div>
-      <div class="legend-item"><div class="legend-line" style="background:#D2691E;"></div>Kvist</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#A0522D;"></div>Fågelbo</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#9C27B0;"></div>Predator (Immortal)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3ECF5B;"></div>Hide Spot</div>
+      <div class="legend-item"><div class="legend-rect" style="background:#006400;"></div>Tree (Obstacle)</div>
+      <div class="legend-item"><div class="legend-line" style="background:#D2691E;"></div>Twig</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#A0522D;"></div>Bird Nest</div>
     </div>
 
     <div class="tip info">
-      🌲 <strong>NYTT MÅL:</strong> Fåglarna måste nu bygga ett bo! Hämta kvistar (pinnar) från högen mitt på banan
-      och flyg med dem till boet uppe till vänster. Varje kvist ger en <strong>stor fitness-bonus!</strong>
-      Träd är nu hinder som man måste flyga runt eller över.
+      🌲 <strong>NEW GOAL:</strong> The birds must now build a nest! Collect twigs from the pile in the middle of the
+      arena and carry them to the nest in the upper left. Every twig grants a <strong>big fitness bonus!</strong>
+      Trees are obstacles that everyone must fly around or above.
     </div>
-    
+
     <div class="tip danger">
-      ⚠️ <strong>GÖMSTÄLLEN:</strong> Fåglar kan gömma sig i <strong>max 3 sekunder</strong> (180 frames), 
-      sen MÅSTE de ut i <strong>5 sekunder cooldown</strong>.
+      ⚠️ <strong>HIDE SPOTS:</strong> Birds can hide for a <strong>maximum of 3 seconds</strong> (180 frames),
+      then they MUST leave for a <strong>5 second cooldown</strong>.
     </div>
 
     <div class="section">
-      <div class="section-title collapsible" data-target="basic">⚙️ Grundinställningar</div>
+      <div class="section-title collapsible" data-target="basic">⚙️ Core Settings</div>
       <div id="basic" class="collapse-content">
         <div class="grid">
           <div class="control">
-            <label>🐦 Småfåglar totalt</label>
+            <label>🐦 Total Small Birds</label>
             <input type="number" id="birdCount" value="30" min="9" max="90" step="3">
           </div>
           <div class="control">
-            <label>🦅 Antal fiender</label>
+            <label>🦅 Predator Count</label>
             <input type="range" id="predCount" min="0" max="8" value="0">
             <span class="chip danger" id="uiPredCount">0</span>
           </div>
           <div class="control">
-            <label>🍎 Mat spawn-hastighet</label>
+            <label>🍎 Food Spawn Rate</label>
             <input type="range" id="foodRate" min="1" max="20" value="8">
             <span class="chip" id="uiFoodRate">8</span>
           </div>
           <div class="control">
-            <label>🌳 Antal gömställen</label>
+            <label>🌳 Hide Spots Count</label>
             <input type="range" id="hideSpots" min="3" max="15" value="6">
             <span class="chip ok" id="uiHideSpots">6</span>
           </div>
           <div class="control">
-            <label>🏠 Kapacitet per gömställe</label>
+            <label>🏠 Capacity per Hide Spot</label>
             <input type="range" id="hideCapacity" min="1" max="8" value="3">
             <span class="chip" id="uiHideCapacity">3</span>
           </div>
           <div class="control">
-            <label>🌲 Antal träd (hinder)</label>
+            <label>🌲 Trees (obstacles)</label>
             <input type="range" id="treeCount" min="0" max="15" value="0">
             <span class="chip warn" id="uiTreeCount">0</span>
           </div>
@@ -180,16 +182,16 @@
     </div>
     
     <div class="section">
-      <div class="section-title collapsible" data-target="nest-build">🏠 Bo-bygge (Nytt Mål!)</div>
+      <div class="section-title collapsible" data-target="nest-build">🏠 Nest Building (New Objective!)</div>
       <div id="nest-build" class="collapse-content">
         <div class="grid">
           <div class="control">
-            <label>🪵 Antal kvistar i hög</label>
+            <label>🪵 Twigs in the Pile</label>
             <input type="range" id="twigCount" min="10" max="200" value="50" step="10">
             <span class="chip" id="uiTwigCount">50</span>
           </div>
           <div class="control">
-            <label>🏆 Fitness-bonus per kvist</label>
+            <label>🏆 Fitness Bonus per Twig</label>
             <input type="range" id="twigBonus" min="500" max="10000" value="3000" step="100">
             <span class="chip ok" id="uiTwigBonus">3000</span>
           </div>
@@ -198,21 +200,21 @@
     </div>
 
     <div class="section">
-      <div class="section-title collapsible collapsed" data-target="hide-settings">🌳 Gömställe-inställningar (Kritiska för evolution!)</div>
+      <div class="section-title collapsible collapsed" data-target="hide-settings">🌳 Hide Spot Settings (Critical for Evolution!)</div>
       <div id="hide-settings" class="collapse-content hidden">
         <div class="grid">
           <div class="control">
-            <label>⏱️ Max tid i gömställe (frames)</label>
+            <label>⏱️ Max Hide Time (frames)</label>
             <input type="range" id="maxHideTime" min="20" max="300" value="180">
             <span class="chip warn" id="uiMaxHideTime">180 (~3s)</span>
           </div>
           <div class="control">
-            <label>⏳ Cooldown efter göm (frames)</label>
+            <label>⏳ Cooldown after Hiding (frames)</label>
             <input type="range" id="hideCooldown" min="60" max="1200" value="300">
             <span class="chip warn" id="uiHideCooldown">300 (~5s)</span>
           </div>
           <div class="control">
-            <label>😰 Fitness-penalty i gömställe</label>
+            <label>😰 Fitness Penalty while Hiding</label>
             <input type="range" id="hidePenalty" min="0" max="20" value="2">
             <span class="chip warn" id="uiHidePenalty">-2</span>
           </div>
@@ -221,16 +223,16 @@
     </div>
 
     <div class="section">
-      <div class="section-title collapsible collapsed" data-target="bird-evo">🧬 Småfågel Evolution</div>
+      <div class="section-title collapsible collapsed" data-target="bird-evo">🧬 Small Bird Evolution</div>
       <div id="bird-evo" class="collapse-content hidden">
         <div class="grid">
           <div class="control">
-            <label>Elite % (bästa förs vidare)</label>
+            <label>Elite % (top survivors kept)</label>
             <input type="range" id="birdElite" min="5" max="100" value="20">
             <span class="chip ok" id="uiBirdElite">20%</span>
           </div>
           <div class="control">
-            <label>Parent Pool % (kan få barn)</label>
+            <label>Parent Pool % (eligible to breed)</label>
             <input type="range" id="birdParent" min="20" max="80" value="50">
             <span class="chip ok" id="uiBirdParent">50%</span>
           </div>
@@ -245,7 +247,7 @@
             <span class="chip ok" id="uiBirdMutPower">0.35</span>
           </div>
           <div class="control">
-            <label>🧠 Dolda neuroner</label>
+            <label>🧠 Hidden Neurons</label>
             <input type="range" id="birdHidden" min="8" max="48" value="24">
             <span class="chip ok" id="uiBirdHidden">24</span>
           </div>
@@ -254,7 +256,7 @@
     </div>
 
     <div class="section">
-      <div class="section-title collapsible collapsed" data-target="pred-evo">🦅 Fiende Evolution</div>
+      <div class="section-title collapsible collapsed" data-target="pred-evo">🦅 Predator Evolution</div>
       <div id="pred-evo" class="collapse-content hidden">
         <div class="grid">
           <div class="control">
@@ -278,7 +280,7 @@
             <span class="chip danger" id="uiPredMutPower">0.30</span>
           </div>
           <div class="control">
-            <label>🧠 Dolda neuroner</label>
+            <label>🧠 Hidden Neurons</label>
             <input type="range" id="predHidden" min="8" max="40" value="20">
             <span class="chip danger" id="uiPredHidden">20</span>
           </div>
@@ -287,31 +289,31 @@
     </div>
 
     <div class="section">
-      <div class="section-title collapsible collapsed" data-target="balance">⚖️ Balans & Beteende</div>
+      <div class="section-title collapsible collapsed" data-target="balance">⚖️ Balance & Behaviour</div>
       <div id="balance" class="collapse-content hidden">
         <div class="grid">
           <div class="control">
-            <label>💨 Stamina-kostnad</label>
+            <label>💨 Stamina Cost</label>
             <input type="range" id="staminaCost" min="1" max="15" value="2">
             <span class="chip" id="uiStaminaCost">2</span>
           </div>
           <div class="control">
-            <label>🔋 Energi per rörelse</label>
+            <label>🔋 Energy per Movement</label>
             <input type="range" id="energyCost" min="1" max="20" value="3">
             <span class="chip" id="uiEnergyCost">0.03</span>
           </div>
           <div class="control">
-            <label>🚨 Varning boost %</label>
+            <label>🚨 Warning Boost %</label>
             <input type="range" id="warnBoost" min="0" max="100" value="30">
             <span class="chip" id="uiWarnBoost">30%</span>
           </div>
           <div class="control">
-            <label>🚨 Alarm-radie</label>
+            <label>🚨 Alarm Radius</label>
             <input type="range" id="alarmRange" min="50" max="400" value="150">
             <span class="chip" id="uiAlarmRange">150</span>
           </div>
           <div class="control">
-            <label>🍎 Mat energi-värde</label>
+            <label>🍎 Food Energy Value</label>
             <input type="range" id="foodValue" min="20" max="100" value="60">
             <span class="chip" id="uiFoodValue">60</span>
           </div>
@@ -320,35 +322,35 @@
     </div>
 
     <div class="section">
-      <div class="section-title collapsible collapsed" data-target="pred-settings">🦅 Fiende-inställningar</div>
+      <div class="section-title collapsible collapsed" data-target="pred-settings">🦅 Predator Settings</div>
       <div id="pred-settings" class="collapse-content hidden">
         <div class="grid">
           <div class="control">
-            <label>⚡ Jakt-hastighet</label>
+            <label>⚡ Hunt Speed</label>
             <input type="range" id="predSpeed" min="4" max="14" value="7">
             <span class="chip danger" id="uiPredSpeed">7</span>
           </div>
           <div class="control">
-            <label>🔋 Bo-laddhastighet</label>
+            <label>🔋 Nest Charge Speed</label>
             <input type="range" id="nestCharge" min="1" max="15" value="5">
             <span class="chip danger" id="uiNestCharge">5</span>
           </div>
           <div class="control">
-            <label>🍖 Energi per fångst</label>
+            <label>🍖 Energy per Capture</label>
             <input type="range" id="killEnergy" min="20" max="100" value="40">
             <span class="chip danger" id="uiKillEnergy">40</span>
           </div>
           <div class="control">
-            <label>💪 Fitness per fångst</label>
+            <label>💪 Fitness per Capture</label>
             <input type="range" id="killFitness" min="500" max="5000" step="100" value="3000">
             <span class="chip danger" id="uiKillFitness">3000</span>
           </div>
           <div class="control">
-            <label>📈 Progressiv evolution</label>
+            <label>📈 Progressive Evolution</label>
             <input type="checkbox" id="predEvolve" checked>
           </div>
           <div class="control">
-            <label>🎯 Pack-jakt</label>
+            <label>🎯 Pack Hunting</label>
             <input type="checkbox" id="packHunt" checked>
           </div>
         </div>
@@ -356,7 +358,7 @@
     </div>
 
     <div class="section">
-      <div class="section-title">📊 Live Statistik</div>
+      <div class="section-title">📊 Live Statistics</div>
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label">⚡ Scout</div>
@@ -374,20 +376,20 @@
           <div class="bar"><div id="flockerBar"></div></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">🪵 Kvistar i Bo</div>
+          <div class="stat-label">🪵 Twigs in Nest</div>
           <div class="stat-value" id="twigsInNest">0</div>
           <div class="bar"><div id="twigBar"></div></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">💀 Totalt döda</div>
+          <div class="stat-label">💀 Total Dead</div>
           <div class="stat-value" id="totalEaten">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">🏠 Fiender laddar</div>
+          <div class="stat-label">🏠 Predators Charging</div>
           <div class="stat-value" id="predsCharging">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">🌳 I gömställen</div>
+          <div class="stat-label">🌳 In Hide Spots</div>
           <div class="stat-value" id="birdsHiding">0</div>
         </div>
         <div class="stat-card">
@@ -398,22 +400,22 @@
     </div>
 
     <div class="section">
-      <div class="section-title">🏆 Rekord</div>
+      <div class="section-title">🏆 Records</div>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-label">⭐ Högsta fitness</div>
+          <div class="stat-label">⭐ Highest Fitness</div>
           <div class="stat-value" id="recordBestFitness">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">⏱️ Längst liv (s)</div>
+          <div class="stat-label">⏱️ Longest Life (s)</div>
           <div class="stat-value" id="recordLongestLife">0s</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">🪹 Största bo</div>
+          <div class="stat-label">🪹 Largest Nest</div>
           <div class="stat-value" id="recordLargestNest">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">💀 Flest fåglar fångade</div>
+          <div class="stat-label">💀 Most Birds Caught</div>
           <div class="stat-value" id="recordMostKills">0</div>
         </div>
       </div>
@@ -429,9 +431,9 @@
     let FOOD_SPAWN_RATE = 8;
     let HIDE_SPOT_COUNT = 6;
     let HIDE_CAPACITY = 3;
-    let TREE_COUNT = 0; // NYTT
+    let TREE_COUNT = 0; // NEW
     
-    // NYTT: Bo-bygge
+    // NEW: Nest building
     let TWIG_PILE_COUNT = 50;
     let TWIG_FITNESS_BONUS = 3000;
     const TWIG_PICKUP_RATIO = 0.12;
@@ -441,10 +443,10 @@
     const TWIG_IDLE_INTERVAL = 45;
     const TWIG_DEATH_RATIO = 0.3;
     
-    // KRITISKT för evolution!
-    let MAX_HIDE_TIME = 180; // Max 3 sekunder i gömställe (längre tid att vila)
-    let HIDE_COOLDOWN = 300; // 5 sekunder cooldown (snabbare återhämtning)
-    let HIDE_PENALTY = 2; // Mindre straff för att gömma sig
+    // CRITICAL for evolution!
+    let MAX_HIDE_TIME = 180; // Max 3 seconds in a hide spot (longer time to rest)
+    let HIDE_COOLDOWN = 300; // 5 second cooldown (faster recovery)
+    let HIDE_PENALTY = 2; // Smaller penalty for hiding
     
     // Bird evolution
     let BIRD_ELITE_RATE = 0.20;
@@ -461,16 +463,16 @@
     let PRED_HIDDEN = 20;
     
     // Balance
-    let STAMINA_COST = 2; // Mindre trötthet
-    let ENERGY_MOVE_COST = 0.03; // Grundkostnad energi per steg
+    let STAMINA_COST = 2; // Less fatigue
+    let ENERGY_MOVE_COST = 0.03; // Base energy cost per step
     let WARN_BOOST = 0.30;
     let ALARM_RANGE = 150;
-    let FOOD_VALUE = 60; // Mer energi från mat
+    let FOOD_VALUE = 60; // More energy from food
     
     // Pred settings
     let PRED_SPEED = 7;
     let NEST_CHARGE_RATE = 5;
-    let KILL_ENERGY = 40; // Mindre energi från fångst (anpassat till kortare bar)
+    let KILL_ENERGY = 40; // Less energy from catches (balanced with shorter bar)
     let KILL_FITNESS = 3000;
     let PRED_EVOLVE = true;
     let PACK_HUNT = true;
@@ -912,7 +914,7 @@
       }
     }
     
-    // NYTT: Träd-klass
+    // NEW: Tree class
     class Tree {
       constructor(x, width, height) {
         this.x = x;
@@ -952,7 +954,7 @@
       }
     }
     
-    // NYTT: Kvist-klass
+    // NEW: Twig class
     class Twig {
       constructor(x, y) {
         this.x = x;
@@ -962,7 +964,7 @@
         this.length = 25 + Math.random() * 20;
       }
       draw() {
-        if (this.carriedBy) return; // Ritas av fågeln
+        if (this.carriedBy) return; // Drawn by the bird
 
         ctx.save();
         ctx.translate(this.x, this.y);
@@ -977,7 +979,7 @@
       }
     }
     
-    // NYTT: Fågelbo-klass
+    // NEW: Bird nest class
     class BirdNest {
       constructor(x, y) {
         this.x = x;
@@ -1006,20 +1008,20 @@
         const groundContactY = GROUND_Y;
         const poleHeight = Math.max(0, groundContactY - (bodyY + bodyHeight));
 
-        // Skugga
+        // Shadow
         const shadowGrad = ctx.createLinearGradient(bodyX, bodyY - roofHeight, bodyX, bodyY + bodyHeight + poleHeight);
         shadowGrad.addColorStop(0, 'rgba(0,0,0,0.08)');
         shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = shadowGrad;
         ctx.fillRect(bodyX - 10, bodyY - roofHeight, bodyWidth + 20, bodyHeight + poleHeight + 20);
 
-        // Stolpe
+        // Pole
         ctx.fillStyle = '#8B5A2B';
         if (poleHeight > 0) {
           ctx.fillRect(this.x - poleWidth / 2, bodyY + bodyHeight, poleWidth, poleHeight);
         }
 
-        // Kropp
+        // Body
         const corner = bodyWidth * 0.12;
         const bodyGradient = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyHeight);
         bodyGradient.addColorStop(0, '#fdf9f3');
@@ -1041,7 +1043,7 @@
         ctx.lineWidth = 4;
         ctx.stroke();
 
-        // Tak
+        // Roof
         const roofLeft = bodyX - bodyWidth * 0.12;
         const roofRight = bodyX + bodyWidth + bodyWidth * 0.12;
         const roofTop = bodyY - roofHeight;
@@ -1059,7 +1061,7 @@
         ctx.lineWidth = 4;
         ctx.stroke();
 
-        // Ingång
+        // Entrance
         const holeY = bodyY + bodyHeight * 0.42;
         const holeRadius = bodyWidth * 0.22;
         ctx.fillStyle = '#2f2a24';
@@ -1072,7 +1074,7 @@
         ctx.arc(this.x, holeY, holeRadius + 4, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Sittpinne
+        // Perch
         const perchY = bodyY + bodyHeight * 0.62;
         const perchWidth = bodyWidth * 0.55;
         ctx.fillStyle = '#b48248';
@@ -1081,7 +1083,7 @@
         ctx.arc(this.x + perchWidth / 2, perchY + 3, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Kvistar som dekoration
+        // Decorative twigs
         ctx.save();
         ctx.translate(this.x, bodyY + bodyHeight * 0.8);
         for (const twig of this.twigData) {
@@ -1183,7 +1185,7 @@
       constructor(type, brain) {
         this.type = type;
         this.typeData = BIRD_TYPES[type];
-        // UPPDATERAD Hjärna: 33 inputs, 4 outputs
+        // UPDATED Brain: 33 inputs, 4 outputs
         this.brain = brain || new Brain(33, BIRD_HIDDEN, 4);
         this.reset();
       }
@@ -1193,8 +1195,8 @@
         this.vx = 0;
         this.vy = 0;
         this.alive = true;
-        this.energy = 200; // Mer startenergi
-        this.maxEnergy = 200; // Högre maxenergi
+        this.energy = 200; // More starting energy
+        this.maxEnergy = 200; // Higher max energy
         this.stamina = 100;
         this.maxStamina = 100;
         this.fitness = 0;
@@ -1204,8 +1206,8 @@
         this.hideCooldown = 0;
         this.warned = false;
         this.age = 0;
-        this.hasTwig = null; // NYTT
-        this.facing = 1; // NYTT
+        this.hasTwig = null; // NEW
+        this.facing = 1; // NEW
         this.twigLastDist = null;
         this.twigCarryTime = 0;
         this.trail = [];
@@ -1246,7 +1248,7 @@
           }
         }
         
-        // NYTT: Hitta närmaste kvist
+        // NEW: Find nearest twig
         let closestTwig = null;
         let minTwigDist = Infinity;
         if (!this.hasTwig) {
@@ -1260,7 +1262,7 @@
           }
         }
         
-        // NYTT: Distans till bo
+        // NEW: Distance to nest
         const nestDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
         
         let nearbyBirds = 0;
@@ -1345,12 +1347,12 @@
           wallDistNorm // 33
         ];
 
-        // UPPDATERAD: 4 outputs
+        // UPDATED: 4 outputs
         const outputs = this.brain.forward(inputs);
         this.moveX = outputs[0];
         this.moveY = outputs[1];
         this.wantHide = outputs[2] > 0.3;
-        this.wantTwig = outputs[3] > 0.3; // NYTT
+        this.wantTwig = outputs[3] > 0.3; // NEW
       }
       update() {
         if (!this.alive) return;
@@ -1363,12 +1365,12 @@
         if (this.vx > 0.1) this.facing = 1;
         else if (this.vx < -0.1) this.facing = -1;
         
-        // Cooldown räknare
+        // Cooldown counter
         if (this.hideCooldown > 0) {
           this.hideCooldown--;
         }
         
-        // Gömställe-logik
+        // Hide spot logic
         if (this.hiding) {
           this.trail = [];
           this.hidingTime++;
@@ -1388,9 +1390,9 @@
           return;
         }
         
-        // NYTT: Kvist-logik
+        // NEW: Twig logic
         if (this.hasTwig) {
-          // Flyg till boet
+          // Fly to the nest
           const distToNest = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
           if (this.twigLastDist === null) {
             this.twigLastDist = distToNest;
@@ -1409,10 +1411,10 @@
           this.twigLastDist = distToNest;
 
           if (distToNest < birdNest.radius + 15) {
-            // Lämnat kvist!
+            // Twig delivered!
             birdNest.addTwig();
             if (this.hasTwig) this.hasTwig.carriedBy = null;
-            twigPile = twigPile.filter(t => t !== this.hasTwig); // Ta bort kvisten permanent
+            twigPile = twigPile.filter(t => t !== this.hasTwig); // Remove the twig permanently
             this.hasTwig = null;
             this.twigLastDist = null;
             this.twigCarryTime = 0;
@@ -1421,7 +1423,7 @@
             recordLargestNest = Math.max(recordLargestNest, twigsInNest);
           }
         } else if (this.wantTwig && this.hideCooldown === 0) {
-          // Försök plocka upp kvist
+          // Try to pick up a twig
           for (const t of twigPile) {
             if (!t.carriedBy && Math.hypot(this.x - t.x, this.y - t.y) < 35) {
               this.hasTwig = t;
@@ -1433,9 +1435,9 @@
             }
           }
         }
-        
-        // Försök gömma sig OM cooldown är över (och vi inte bär en kvist?)
-        // Fåglar som bär kvistar kanske inte vill gömma sig? Vi låter hjärnan bestämma.
+
+        // Try to hide IF the cooldown is over (and we're not carrying a twig?)
+        // Birds carrying twigs might not want to hide? Let the brain decide.
         if (this.wantHide && this.hideCooldown === 0 && !this.hasTwig) {
           for (const h of hideSpots) {
             const d = Math.hypot(this.x - h.x, this.y - h.y);
@@ -1460,7 +1462,7 @@
         if (grounded) speedMult *= 0.35;
         if (this.stamina < 20) speedMult *= 0.5;
         if (this.warned) speedMult *= (1 + WARN_BOOST);
-        if (this.hasTwig) speedMult *= 0.8; // Långsammare med kvist
+        if (this.hasTwig) speedMult *= 0.8; // Slower with a twig
         
         this.vx += this.moveX * 0.7 * speedMult;
         this.vy += this.moveY * 0.7 * speedMult;
@@ -1485,13 +1487,13 @@
         this.x += this.vx;
         this.y += this.vy;
         
-        // Vägg-kollision
+        // Wall collision
         if (this.x < 0) { this.x = 0; this.vx = Math.abs(this.vx); }
         if (this.x > canvas.width) { this.x = canvas.width; this.vx = -Math.abs(this.vx); }
         if (this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); }
         if (this.y > GROUND_Y) { this.y = GROUND_Y; this.vy = -Math.abs(this.vy) * 0.6; }
         
-        // NYTT: Träd-kollision
+        // NEW: Tree collision
         for (const tree of trees) {
           const birdRadiusX = 8;
           const birdRadiusY = 6;
@@ -1499,15 +1501,15 @@
               this.x - birdRadiusX < tree.x + tree.width &&
               this.y + birdRadiusY > tree.y) {
             
-            // Kolliderar. Kolla om vi träffar toppen
+            // Colliding. Check if we hit the top
             if (this.y - birdRadiusY < tree.y && this.vy > 0) {
               this.y = tree.y - birdRadiusY;
-              this.vy = -Math.abs(this.vy) * 0.3; // Studsa från toppen
-            } else { // Träffa sidan
-              if (this.vx > 0) { // Rör sig höger
+              this.vy = -Math.abs(this.vy) * 0.3; // Bounce off the top
+            } else { // Hit the side
+              if (this.vx > 0) { // Moving right
                 this.x = tree.x - birdRadiusX;
                 this.vx = -Math.abs(this.vx) * 0.5;
-              } else { // Rör sig vänster
+              } else { // Moving left
                 this.x = tree.x + tree.width + birdRadiusX;
                 this.vx = Math.abs(this.vx) * 0.5;
               }
@@ -1520,7 +1522,7 @@
         }
         this.trail.push({ x: this.x, y: this.y });
 
-        // Mat-kollision
+        // Food collision
         for (const f of foodParticles) {
           if (f.eaten) continue;
           const d = Math.hypot(this.x - f.x, this.y - f.y);
@@ -1556,7 +1558,7 @@
         if (this.energy <= 0 || this.stamina <= 0) {
           this.alive = false;
           this.fitness = Math.max(0, this.fitness - 400);
-          if (this.hasTwig) { // Tappa kvist vid död
+          if (this.hasTwig) { // Drop twig on death
             this.fitness = Math.max(0, this.fitness - TWIG_FITNESS_BONUS * TWIG_DEATH_RATIO);
             this.hasTwig.carriedBy = null;
             this.hasTwig = null;
@@ -1835,7 +1837,7 @@
         if (this.y < 0) { this.y = 10; this.vy = Math.abs(this.vy) * 0.5; this.energy -= 25; this.fitness -= 15; }
         if (this.y > GROUND_Y) { this.y = GROUND_Y - 10; this.vy = -Math.abs(this.vy) * 0.5; this.energy -= 25; this.fitness -= 15; }
 
-        // NYTT: Träd-kollision för fiende
+        // NEW: Tree collision for predator
         for (const tree of trees) {
           const predRadiusX = 16;
           const predRadiusY = 10;
@@ -1901,7 +1903,7 @@
           if (d < 18) {
             b.alive = false;
             b.trail = [];
-            if (b.hasTwig) { // Tappa kvist vid död
+            if (b.hasTwig) { // Drop twig on death
               b.fitness = Math.max(0, b.fitness - TWIG_FITNESS_BONUS * TWIG_DEATH_RATIO);
               b.hasTwig.carriedBy = null;
               b.hasTwig = null;
@@ -1946,7 +1948,7 @@
         
         if (this.facing < 0) ctx.scale(-1, 1);
         
-        // Förenklad kropp
+        // Simplified body
         ctx.fillStyle = '#9C27B0';
         ctx.beginPath();
         ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
@@ -2084,7 +2086,7 @@
       }
       buildPredatorNests(PRED_COUNT);
       
-      // NYTT: Init Träd
+      // NEW: Init Trees
       trees = [];
       for (let i = 0; i < TREE_COUNT; i++) {
         const treeWidth = 25 + Math.random() * 20;
@@ -2095,7 +2097,7 @@
       }
       
       // NYTT: Init Bo & Kvistar
-      birdNest = new BirdNest(NEST_X, NEST_Y); // Längst ner till vänster
+      birdNest = new BirdNest(NEST_X, NEST_Y); // Bottom left
       twigPile = [];
       const pileX = TWIG_PILE_X;
       const pileY = TWIG_PILE_Y;
@@ -2123,7 +2125,7 @@
       birds = [];
       const perType = BIRD_COUNT / 3;
       
-      // Brain skapas nu med rätt antal inputs/outputs i konstruktorn
+      // Brain now created with the correct number of inputs/outputs in the constructor
       for (let i = 0; i < perType; i++) birds.push(new Bird('SCOUT'));
       for (let i = 0; i < perType; i++) birds.push(new Bird('THINKER'));
       for (let i = 0; i < perType; i++) birds.push(new Bird('FLOCKER'));
@@ -2175,7 +2177,7 @@
             childBrain.mutate(BIRD_MUT_RATE, BIRD_MUT_POWER);
             newBirds.push(new Bird(type, childBrain));
           } else {
-            newBirds.push(new Bird(type)); // Skapar ny hjärna
+            newBirds.push(new Bird(type)); // Creates new brain
           }
         }
       }
@@ -2227,7 +2229,7 @@
       foodParticles = [];
       deadThisGen = 0;
       
-      // Återställ boet för nästa generation
+      // Reset the nest for the next generation
       birdNest = new BirdNest(NEST_X, NEST_Y);
       twigPile = [];
       const pileX = TWIG_PILE_X;
@@ -2266,7 +2268,7 @@
       document.getElementById('birdsHiding').textContent = birds.filter(b => b.hiding).length;
       document.getElementById('foodActive').textContent = foodParticles.filter(f => !f.eaten).length;
 
-      // NYTT: HUD för kvistar
+      // NEW: HUD for twigs
       document.getElementById('twigsInNest').textContent = twigsInNest;
       document.getElementById('twigBar').style.width = (twigsInNest / TWIG_PILE_COUNT * 100) + '%';
 
@@ -2307,7 +2309,7 @@
       });
       
       const anyAlive = birds.some(b => b.alive);
-      if (!anyAlive && globalTime > 100) { // Liten fördröjning
+      if (!anyAlive && globalTime > 100) { // Small delay
         nextGeneration();
       }
     }
@@ -2342,7 +2344,7 @@
       if (birdNest) birdNest.draw(); // NYTT
       trees.forEach(t => t.draw()); // NYTT
       
-      // Rita kvistar som inte bärs
+      // Draw twigs that are not carried
       twigPile.forEach(t => t.draw()); // NYTT
       
       alarmWaves.forEach(w => w.draw());
@@ -2350,7 +2352,7 @@
       particles.forEach(p => p.draw());
       birds.forEach(b => b.draw());
       
-      // Ritar BÅDE flygande och laddande fiender
+      // Draw BOTH flying and charging predators
       predators.forEach(p => p.draw()); 
       
       updateHUD();
