@@ -457,6 +457,17 @@
     const WALL_PENALTY_BASE = 220;
     const CEILING_PENALTY_ENERGY = 14;
     const CEILING_PENALTY_BASE = 260;
+
+    const PRED_WALL_CRASH_ENERGY_RATIO = 0.12;
+    const PRED_WALL_CRASH_FITNESS = 140;
+    const PRED_WALL_FORCED_RETURN = 260;
+    const PRED_CORNER_WARN_DIST = 140;
+    const PRED_CORNER_ENERGY_DRAIN = 0.9;
+    const PRED_CORNER_FITNESS_DRAIN = 2.6;
+    const PRED_CHASE_PROGRESS_REWARD = 0.9;
+    const PRED_CHASE_PROGRESS_PENALTY = 0.45;
+    const PRED_CHASE_PROXIMITY_BONUS = 1.6;
+    const PRED_HIGH_SPEED_REWARD = 0.6;
     const COLLISION_ENERGY_FLOOR = 5;
     const COLLISION_STAMINA_FLOOR = 5;
     
@@ -1564,6 +1575,7 @@
           this.wallContact++;
           const contactSeverity = 1 + this.wallContact * 0.2;
           this.fitness -= WALL_PENALTY_BASE * contactSeverity;
+          this.energy = Math.max(0, this.energy - WALL_PENALTY_ENERGY * contactSeverity);
           this.energy = applyCollisionPenalty(
             this.energy,
             WALL_PENALTY_ENERGY * contactSeverity,
@@ -1577,6 +1589,8 @@
           this.ceilingContact++;
           const severity = 1 + this.ceilingContact * 0.3;
           this.fitness -= CEILING_PENALTY_BASE * severity;
+          this.energy = Math.max(0, this.energy - CEILING_PENALTY_ENERGY * severity);
+          this.stamina = Math.max(0, this.stamina - 4 * severity);
           this.energy = applyCollisionPenalty(
             this.energy,
             CEILING_PENALTY_ENERGY * severity,
@@ -1600,6 +1614,8 @@
           this.groundContact++;
           const severity = 1 + Math.max(0, 4 - groundGap) * 0.8 + this.groundContact * 0.25;
           this.fitness -= GROUND_PENALTY_BASE * severity;
+          this.energy = Math.max(0, this.energy - GROUND_PENALTY_ENERGY * severity);
+          this.stamina = Math.max(0, this.stamina - GROUND_PENALTY_STAMINA * severity);
           this.energy = applyCollisionPenalty(
             this.energy,
             GROUND_PENALTY_ENERGY * severity,
@@ -1798,6 +1814,9 @@
         this.facing = -1; // NYTT
         this.prevTargetDist = null;
         this.prevNestDist = null;
+        this.forcedReturn = 0;
+        this.wallCrashTimer = 0;
+        this.cornerStall = 0;
       }
       update() {
         if (this.vx > 0.1) this.facing = 1;
@@ -1808,6 +1827,11 @@
           this.energy = Math.min(this.energy + NEST_CHARGE_RATE, this.maxEnergy);
           this.prevTargetDist = null;
           this.prevNestDist = null;
+          if (this.wallCrashTimer > 0) this.wallCrashTimer--;
+          if (this.forcedReturn > 0 && this.energy >= this.maxEnergy * 0.95) {
+            this.forcedReturn = 0;
+            this.cornerStall = 0;
+          }
 
           if (this.energy >= this.maxEnergy && this.nestTime > 20) {
             this.inNest = false;
@@ -1815,9 +1839,11 @@
           }
           return;
         }
-        
+
         this.energy -= 0.6;
-        
+        if (this.wallCrashTimer > 0) this.wallCrashTimer--;
+        if (this.forcedReturn > 0) this.forcedReturn--;
+
         let target = null;
         let minDist = Infinity;
         for (const b of birds) {
@@ -1883,6 +1909,18 @@
         const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y);
         const wallDistNorm = normTree(wallDist);
 
+        if (wallDist < PRED_CORNER_WARN_DIST) {
+          const severity = 1 - Math.min(wallDist / PRED_CORNER_WARN_DIST, 1);
+          this.energy = Math.max(0, this.energy - PRED_CORNER_ENERGY_DRAIN * severity);
+          this.fitness -= PRED_CORNER_FITNESS_DRAIN * severity;
+          this.cornerStall += 1 + severity;
+        } else {
+          this.cornerStall = Math.max(0, this.cornerStall - 1);
+        }
+        if (this.cornerStall > 18) {
+          this.forcedReturn = Math.max(this.forcedReturn, Math.floor(PRED_WALL_FORCED_RETURN * 0.6));
+        }
+
         const inputs = [
           this.x / canvas.width,
           this.y / canvas.height,
@@ -1905,15 +1943,23 @@
           rightTreeNorm,
           wallDistNorm
         ];
-        
+
         const outputs = this.brain.forward(inputs);
-        
+
+        const forcedRecall = this.forcedReturn > 0;
         const evolutionBonus = PRED_EVOLVE ? (1 + this.huntBonus * 0.1) : 1;
         const packBonus = PACK_HUNT ? (1 + packMates * 0.1) : 1;
-        const moveX = outputs[0] * 0.8 * evolutionBonus * packBonus;
-        const moveY = outputs[1] * 0.8 * evolutionBonus * packBonus;
-        const wantNest = outputs[2] > 0.4;
-        
+        const recallThrottle = forcedRecall ? 0.55 : 1;
+        const moveX = outputs[0] * 0.8 * evolutionBonus * packBonus * recallThrottle;
+        const moveY = outputs[1] * 0.8 * evolutionBonus * packBonus * recallThrottle;
+        let wantNest = outputs[2] > 0.4;
+        if (forcedRecall || this.energy < this.maxEnergy * 0.25) {
+          wantNest = true;
+        }
+        if (forcedRecall) {
+          this.fitness -= 0.5;
+        }
+
         this.vx += moveX;
         this.vy += moveY;
         this.vx *= 0.96;
@@ -1929,10 +1975,28 @@
         this.x += this.vx;
         this.y += this.vy;
         
-        if (this.x < 0) { this.x = 10; this.vx = Math.abs(this.vx) * 0.5; this.energy -= 25; this.fitness -= 15; }
-        if (this.x > canvas.width) { this.x = canvas.width - 10; this.vx = -Math.abs(this.vx) * 0.5; this.energy -= 25; this.fitness -= 15; }
-        if (this.y < 0) { this.y = 10; this.vy = Math.abs(this.vy) * 0.5; this.energy -= 25; this.fitness -= 15; }
-        if (this.y > GROUND_Y) { this.y = GROUND_Y - 10; this.vy = -Math.abs(this.vy) * 0.5; this.energy -= 25; this.fitness -= 15; }
+        if (this.x < 12) {
+          this.x = 12;
+          this.vx = Math.abs(this.vx) * 0.25;
+          this.applyWallCrash();
+        }
+        if (this.x > canvas.width - 12) {
+          this.x = canvas.width - 12;
+          this.vx = -Math.abs(this.vx) * 0.25;
+          this.applyWallCrash();
+        }
+        if (this.y < 12) {
+          this.y = 12;
+          this.vy = Math.abs(this.vy) * 0.25;
+          this.applyWallCrash();
+        }
+        if (this.y > GROUND_Y - 12) {
+          this.y = GROUND_Y - 12;
+          this.vy = -Math.abs(this.vy) * 0.3;
+          this.applyWallCrash();
+        }
+
+        this.energy = Math.max(0, this.energy);
 
         // NEW: Tree collision for predator
         for (const tree of trees) {
@@ -1964,19 +2028,29 @@
         if (previousTargetDist !== null && newTargetDist !== null) {
           const chaseDelta = previousTargetDist - newTargetDist;
           if (chaseDelta > 0) {
-            this.fitness += chaseDelta * 0.4;
+            this.fitness += chaseDelta * PRED_CHASE_PROGRESS_REWARD;
           } else if (chaseDelta < 0) {
-            this.fitness += chaseDelta * 0.2;
+            this.fitness += chaseDelta * PRED_CHASE_PROGRESS_PENALTY;
           }
         } else if (!target) {
           if (birds.some(b => b.alive && !b.hiding)) {
-            this.fitness -= 0.4;
+            this.fitness -= 0.6;
+          }
+        }
+
+        if (target && newTargetDist !== null) {
+          const proximity = clamp(1 - newTargetDist / 450, 0, 1);
+          this.fitness += proximity * PRED_CHASE_PROXIMITY_BONUS;
+          if (speed > maxSpeed * 0.65) {
+            this.fitness += proximity * PRED_HIGH_SPEED_REWARD;
+          } else if (speed < maxSpeed * 0.25) {
+            this.fitness -= 0.6;
           }
         }
 
         const updatedNestDist = Math.hypot(this.x - this.homeNest.x, this.y - this.homeNest.y);
         const nestDelta = previousNestDist - updatedNestDist;
-        if (wantNest || this.energy < this.maxEnergy * 0.35) {
+        if (wantNest || forcedRecall || this.energy < this.maxEnergy * 0.35) {
           if (nestDelta > 0) {
             this.fitness += nestDelta * 0.2;
           } else if (nestDelta < 0) {
@@ -1985,11 +2059,11 @@
         }
 
         if (target && newTargetDist !== null && newTargetDist < 180) {
-          this.fitness += 1.5;
+          this.fitness += 2.2;
         }
 
         if (target && newTargetDist !== null && newTargetDist > 320) {
-          this.fitness -= 0.3;
+          this.fitness -= 0.5;
         }
 
         this.prevNestDist = updatedNestDist;
@@ -2026,7 +2100,7 @@
 
         this.prevTargetDist = (target && target.alive) ? Math.hypot(this.x - target.x, this.y - target.y) : null;
         
-        if (wantNest || this.energy < this.maxEnergy * 0.5) { 
+        if (wantNest || forcedRecall || this.energy < this.maxEnergy * 0.5) {
           if (distToNest < this.homeNest.radius) {
             this.inNest = true;
             this.x = this.homeNest.x;
@@ -2036,7 +2110,18 @@
           }
         }
       }
-      
+
+      applyWallCrash() {
+        if (this.wallCrashTimer > 0) return;
+        this.fitness -= PRED_WALL_CRASH_FITNESS;
+        this.energy = Math.max(0, this.energy - this.maxEnergy * 0.3);
+        this.energy = Math.min(this.energy, this.maxEnergy * PRED_WALL_CRASH_ENERGY_RATIO);
+        this.forcedReturn = Math.max(this.forcedReturn, PRED_WALL_FORCED_RETURN);
+        this.huntBonus = Math.max(0, this.huntBonus - 0.1);
+        this.cornerStall = Math.max(this.cornerStall, 12);
+        this.wallCrashTimer = 30;
+      }
+
       // NYTT: drawInNest
       drawInNest() {
         ctx.save();
