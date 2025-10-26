@@ -11,7 +11,7 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       display:flex; flex-direction:column; align-items:center; color:var(--ink); padding:20px; min-height:100vh; }
     h1{ color:#fff; margin:8px 0 16px; text-shadow:0 3px 10px rgba(0,0,0,0.3); font-weight:900; font-size:28px; }
-    #canvas{ border:4px solid #2d3748; background:#87CEEB url('assets/sky-background.svg') center/cover no-repeat;
+    #canvas{ border:4px solid #2d3748; background:#87CEEB url('assets/sky-background.png') center/cover no-repeat;
       box-shadow:0 20px 60px rgba(0,0,0,.4); border-radius:16px; max-width:100%; }
     .controls{ margin:20px 0; padding:24px; backdrop-filter: blur(16px);
       background:var(--panel); border-radius:20px; box-shadow:0 15px 40px rgba(0,0,0,.2); 
@@ -515,12 +515,12 @@
     const INITIAL_FOOD_COUNT = 25;
 
     const backgroundImage = new Image();
-    backgroundImage.src = 'assets/sky-background.svg';
+    backgroundImage.src = 'assets/sky-background.png';
     let backgroundReady = false;
     backgroundImage.onload = () => { backgroundReady = true; };
 
     const birdhouseSprite = new Image();
-    birdhouseSprite.src = 'assets/birdhouse.svg';
+    birdhouseSprite.src = 'assets/birdhouse.png';
     let birdhouseReady = false;
     birdhouseSprite.onload = () => { birdhouseReady = true; };
     
