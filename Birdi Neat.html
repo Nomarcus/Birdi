@@ -381,6 +381,8 @@
   </div>
 
   <script>
+    const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+
     // Config
     let BIRD_COUNT = 30;
     let PRED_COUNT = 4;
@@ -665,7 +667,7 @@
         this.life--;
       }
       draw() {
-        const alpha = this.life / this.maxLife;
+        const alpha = clamp(this.life / this.maxLife);
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.fillStyle = this.color;
@@ -689,7 +691,7 @@
         this.life--;
       }
       draw() {
-        const alpha = this.life / 40;
+        const alpha = clamp(this.life / 40);
         ctx.save();
         ctx.globalAlpha = alpha * 0.3;
         ctx.strokeStyle = '#FF6B6B';
@@ -1337,7 +1339,7 @@
         }
         
         if (this.hideCooldown > 0) {
-          const cooldownPct = this.hideCooldown / HIDE_COOLDOWN;
+          const cooldownPct = clamp(this.hideCooldown / HIDE_COOLDOWN);
           ctx.strokeStyle = `rgba(255, 100, 100, ${cooldownPct})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
@@ -1388,13 +1390,13 @@
           ctx.stroke();
         }
         
-        const ep = this.energy / this.maxEnergy;
+        const ep = clamp(this.energy / this.maxEnergy);
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.fillRect(-9, -12, 18, 2);
         ctx.fillStyle = ep > 0.5 ? '#4CAF50' : ep > 0.25 ? '#FFA500' : '#FF4444';
         ctx.fillRect(-9, -12, 18 * ep, 2);
-        
-        const sp = this.stamina / this.maxStamina;
+
+        const sp = clamp(this.stamina / this.maxStamina);
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.fillRect(-9, -15, 18, 2);
         ctx.fillStyle = sp > 0.5 ? '#2196F3' : sp > 0.25 ? '#FFA500' : '#FF4444';
@@ -1688,7 +1690,7 @@
         ctx.fill();
         
         // Energibar
-        const ep = Math.min(1, this.energy / this.maxEnergy); // FIX: Garantera max 1
+        const ep = clamp(this.energy / this.maxEnergy);
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.fillRect(-9, -18, 18, 3);
         ctx.fillStyle = ep > 0.95 ? '#4CAF50' : ep > 0.25 ? '#FFA500' : '#FF4444';
@@ -1746,7 +1748,7 @@
         ctx.arc(12, -4, 1, 0, Math.PI * 2);
         ctx.fill();
         
-        const ep = Math.min(1, this.energy / this.maxEnergy); // FIX: Garantera max 1
+        const ep = clamp(this.energy / this.maxEnergy);
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.fillRect(-9, -18, 18, 3);
         ctx.fillStyle = ep > 0.5 ? '#4CAF50' : ep > 0.25 ? '#FFA500' : '#FF4444';
