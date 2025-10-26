@@ -146,7 +146,8 @@
 
     <div class="tip info">
       🦅 <strong>PREDATOR NESTS:</strong> Predators may only charge for about <strong>4 seconds</strong> before being
-      forced back into the hunt and must stay away for roughly <strong>3.5 seconds</strong> before they can recharge again.
+      forced back into the hunt and must stay away for roughly <strong>3.5 seconds</strong> (adjustable below) before they
+      can recharge again.
     </div>
 
     <div class="section">
@@ -341,6 +342,11 @@
             <span class="chip danger" id="uiNestCharge">5</span>
           </div>
           <div class="control">
+            <label>⏳ Nest Cooldown</label>
+            <input type="range" id="predNestCooldown" min="60" max="600" step="30" value="210">
+            <span class="chip danger" id="uiPredNestCooldown">210 (~3.5s)</span>
+          </div>
+          <div class="control">
             <label>🍖 Energy per Capture</label>
             <input type="range" id="killEnergy" min="20" max="100" value="40">
             <span class="chip danger" id="uiKillEnergy">40</span>
@@ -474,7 +480,7 @@
     const PRED_CHASE_PROXIMITY_BONUS = 1.6;
     const PRED_HIGH_SPEED_REWARD = 0.6;
     const PRED_NEST_MAX_TIME = 240; // ~4s vila i boet
-    const PRED_NEST_COOLDOWN = 210; // ~3.5s innan återkomst
+    let PRED_NEST_COOLDOWN = 210; // ~3.5s innan återkomst
     const PRED_BASE_ENERGY = 110;
     const PRED_MAX_ENERGY = 160;
     const PRED_ACTIVE_ENERGY_DRAIN = 0.35;
@@ -768,6 +774,24 @@
     document.getElementById('nestCharge').addEventListener('input', e => {
       NEST_CHARGE_RATE = parseInt(e.target.value);
       document.getElementById('uiNestCharge').textContent = NEST_CHARGE_RATE;
+    });
+
+    const predNestCooldownInput = document.getElementById('predNestCooldown');
+    const predNestCooldownLabel = document.getElementById('uiPredNestCooldown');
+    const formatPredCooldown = frames => {
+      const seconds = (frames / 60).toFixed(1);
+      return `${frames} (~${seconds}s)`;
+    };
+    predNestCooldownInput.value = PRED_NEST_COOLDOWN;
+    predNestCooldownLabel.textContent = formatPredCooldown(PRED_NEST_COOLDOWN);
+    predNestCooldownInput.addEventListener('input', e => {
+      PRED_NEST_COOLDOWN = parseInt(e.target.value, 10);
+      predNestCooldownLabel.textContent = formatPredCooldown(PRED_NEST_COOLDOWN);
+      predators.forEach(pred => {
+        if (!pred.inNest) {
+          pred.nestCooldown = Math.min(pred.nestCooldown, PRED_NEST_COOLDOWN);
+        }
+      });
     });
     
     document.getElementById('killEnergy').addEventListener('input', e => {
@@ -2061,8 +2085,8 @@
         for (const tree of trees) {
           const predRadiusX = 16;
           const predRadiusY = 10;
-          if (this.x + predRadiusX > tree.x && 
-              this.x - predRadiusX < tree.x + tree.width && 
+          if (this.x + predRadiusX > tree.x &&
+              this.x - predRadiusX < tree.x + tree.width &&
               this.y + predRadiusY > tree.y) {
             
             if (this.y - predRadiusY < tree.y && this.vy > 0) {
@@ -2079,6 +2103,18 @@
                 this.vx = Math.abs(this.vx) * 0.5;
                 this.fitness -= 8;
               }
+            }
+          }
+        }
+
+        for (const f of foodParticles) {
+          if (f.eaten) continue;
+          const d = Math.hypot(this.x - f.x, this.y - f.y);
+          if (d < 18) {
+            f.eaten = true;
+            this.energy = Math.min(this.energy + FOOD_VALUE, this.maxEnergy);
+            for (let i = 0; i < 5; i++) {
+              particles.push(new Particle(f.x, f.y, '#8BC34A'));
             }
           }
         }
