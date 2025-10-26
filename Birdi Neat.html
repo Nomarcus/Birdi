@@ -392,6 +392,12 @@
     // NYTT: Bo-bygge
     let TWIG_PILE_COUNT = 50;
     let TWIG_FITNESS_BONUS = 3000;
+    const TWIG_PICKUP_RATIO = 0.12;
+    const TWIG_PROGRESS_FACTOR = 0.6;
+    const TWIG_BACKTRACK_FACTOR = 0.3;
+    const TWIG_IDLE_PENALTY = 2;
+    const TWIG_IDLE_INTERVAL = 45;
+    const TWIG_DEATH_RATIO = 0.3;
     
     // KRITISKT för evolution!
     let MAX_HIDE_TIME = 180; // Max 3 sekunder i gömställe (längre tid att vila)
@@ -591,7 +597,7 @@
     
     // Balance
     document.getElementById('staminaCost').addEventListener('input', e => {
-      STAMINA_COST = parseInt(e.taget.value);
+      STAMINA_COST = parseInt(e.target.value);
       document.getElementById('uiStaminaCost').textContent = STAMINA_COST;
     });
     
@@ -943,8 +949,8 @@
       constructor(type, brain) {
         this.type = type;
         this.typeData = BIRD_TYPES[type];
-        // UPPDATERAD Hjärna: 29 inputs, 4 outputs
-        this.brain = brain || new Brain(29, BIRD_HIDDEN, 4);
+        // UPPDATERAD Hjärna: 33 inputs, 4 outputs
+        this.brain = brain || new Brain(33, BIRD_HIDDEN, 4);
         this.reset();
       }
       reset() {
@@ -966,6 +972,8 @@
         this.age = 0;
         this.hasTwig = null; // NYTT
         this.facing = 1; // NYTT
+        this.twigLastDist = null;
+        this.twigCarryTime = 0;
       }
       think() {
         if (!this.alive || this.hiding) return;
@@ -1028,8 +1036,43 @@
         }
         
         this.warned = closestPred && minPredDist < ALARM_RANGE;
-        
-        // UPPDATERAD: 29 inputs
+
+        const headingMag = Math.hypot(this.vx, this.vy);
+        let dirX = this.vx;
+        let dirY = this.vy;
+        if (headingMag < 0.1) {
+          dirX = this.facing;
+          dirY = 0;
+        }
+        const dirLen = Math.hypot(dirX, dirY) || 1;
+        const normDirX = dirX / dirLen;
+        const normDirY = dirY / dirLen;
+        const leftDirX = -normDirY;
+        const leftDirY = normDirX;
+
+        let frontTree = Infinity;
+        let leftTree = Infinity;
+        let rightTree = Infinity;
+        for (const tree of trees) {
+          const tx = tree.x + tree.width / 2;
+          const ty = tree.y;
+          const dx = tx - this.x;
+          const dy = ty - this.y;
+          const forward = dx * normDirX + dy * normDirY;
+          const lateral = dx * leftDirX + dy * leftDirY;
+          if (forward > 0 && forward < frontTree) frontTree = forward;
+          if (lateral > 0 && lateral < leftTree) leftTree = lateral;
+          if (lateral < 0 && -lateral < rightTree) rightTree = -lateral;
+        }
+
+        const normDist = d => (isFinite(d) ? Math.min(d / 400, 1) : 1);
+        const frontTreeNorm = normDist(frontTree);
+        const leftTreeNorm = normDist(leftTree);
+        const rightTreeNorm = normDist(rightTree);
+        const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y);
+        const wallDistNorm = normDist(wallDist);
+
+        // UPPDATERAD: 33 inputs
         const inputs = [
           this.x / canvas.width,
           this.y / canvas.height,
@@ -1060,9 +1103,13 @@
           closestTwig ? minTwigDist / 1000 : 1, // 26
           (birdNest.x - this.x) / canvas.width, // 27
           (birdNest.y - this.y) / canvas.height, // 28
-          nestDist / 1000 // 29
+          nestDist / 1000, // 29
+          frontTreeNorm, // 30
+          leftTreeNorm, // 31
+          rightTreeNorm, // 32
+          wallDistNorm // 33
         ];
-        
+
         // UPPDATERAD: 4 outputs
         const outputs = this.brain.forward(inputs);
         this.moveX = outputs[0];
@@ -1106,11 +1153,30 @@
         if (this.hasTwig) {
           // Flyg till boet
           const distToNest = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
+          if (this.twigLastDist === null) {
+            this.twigLastDist = distToNest;
+          } else {
+            const progress = this.twigLastDist - distToNest;
+            if (progress > 0) {
+              this.fitness += progress * TWIG_PROGRESS_FACTOR;
+            } else if (progress < 0) {
+              this.fitness += progress * TWIG_BACKTRACK_FACTOR;
+            }
+          }
+          this.twigCarryTime++;
+          if (this.twigCarryTime > 0 && this.twigCarryTime % TWIG_IDLE_INTERVAL === 0) {
+            this.fitness -= TWIG_IDLE_PENALTY;
+          }
+          this.twigLastDist = distToNest;
+
           if (distToNest < birdNest.radius + 10) {
             // Lämnat kvist!
             birdNest.addTwig();
+            if (this.hasTwig) this.hasTwig.carriedBy = null;
             twigPile = twigPile.filter(t => t !== this.hasTwig); // Ta bort kvisten permanent
             this.hasTwig = null;
+            this.twigLastDist = null;
+            this.twigCarryTime = 0;
             this.fitness += TWIG_FITNESS_BONUS;
             twigsInNest++;
           }
@@ -1120,6 +1186,9 @@
             if (!t.carriedBy && Math.hypot(this.x - t.x, this.y - t.y) < 15) {
               this.hasTwig = t;
               t.carriedBy = this;
+              this.twigLastDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
+              this.twigCarryTime = 0;
+              this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
               break;
             }
           }
@@ -1239,8 +1308,11 @@
           this.alive = false;
           this.fitness = Math.max(0, this.fitness - 400);
           if (this.hasTwig) { // Tappa kvist vid död
+            this.fitness = Math.max(0, this.fitness - TWIG_FITNESS_BONUS * TWIG_DEATH_RATIO);
             this.hasTwig.carriedBy = null;
             this.hasTwig = null;
+            this.twigLastDist = null;
+            this.twigCarryTime = 0;
           }
         }
         
@@ -1334,7 +1406,7 @@
     
     class Predator {
       constructor(brain) {
-        this.brain = brain || new Brain(16, PRED_HIDDEN, 3);
+        this.brain = brain || new Brain(20, PRED_HIDDEN, 3);
         this.reset();
       }
       reset() {
@@ -1352,6 +1424,8 @@
         this.nestTime = 0;
         this.huntBonus = 0;
         this.facing = -1; // NYTT
+        this.prevTargetDist = null;
+        this.prevNestDist = null;
       }
       update() {
         if (this.vx > 0.1) this.facing = 1;
@@ -1360,7 +1434,9 @@
         if (this.inNest) {
           this.nestTime++;
           this.energy = Math.min(this.energy + NEST_CHARGE_RATE, this.maxEnergy);
-          
+          this.prevTargetDist = null;
+          this.prevNestDist = null;
+
           if (this.energy >= this.maxEnergy && this.nestTime > 20) {
             this.inNest = false;
             this.nestTime = 0;
@@ -1380,7 +1456,9 @@
             target = b;
           }
         }
-        
+
+        const previousTargetDist = target ? (this.prevTargetDist ?? minDist) : null;
+
         let packMates = 0;
         if (PACK_HUNT && target) {
           for (const p of predators) {
@@ -1389,9 +1467,50 @@
             if (d < 200) packMates++;
           }
         }
-        
+
         const distToNest = Math.hypot(this.x - this.homeNest.x, this.y - this.homeNest.y);
-        
+        const previousNestDist = this.prevNestDist ?? distToNest;
+
+        const headingMag = Math.hypot(this.vx, this.vy);
+        let dirX = this.vx;
+        let dirY = this.vy;
+        if (headingMag < 0.1) {
+          if (target) {
+            dirX = target.x - this.x;
+            dirY = target.y - this.y;
+          } else {
+            dirX = this.facing;
+            dirY = 0;
+          }
+        }
+        const dirLen = Math.hypot(dirX, dirY) || 1;
+        const normDirX = dirX / dirLen;
+        const normDirY = dirY / dirLen;
+        const leftDirX = -normDirY;
+        const leftDirY = normDirX;
+
+        let frontTree = Infinity;
+        let leftTree = Infinity;
+        let rightTree = Infinity;
+        for (const tree of trees) {
+          const tx = tree.x + tree.width / 2;
+          const ty = tree.y;
+          const dx = tx - this.x;
+          const dy = ty - this.y;
+          const forward = dx * normDirX + dy * normDirY;
+          const lateral = dx * leftDirX + dy * leftDirY;
+          if (forward > 0 && forward < frontTree) frontTree = forward;
+          if (lateral > 0 && lateral < leftTree) leftTree = lateral;
+          if (lateral < 0 && -lateral < rightTree) rightTree = -lateral;
+        }
+
+        const normTree = d => (isFinite(d) ? Math.min(d / 500, 1) : 1);
+        const frontTreeNorm = normTree(frontTree);
+        const leftTreeNorm = normTree(leftTree);
+        const rightTreeNorm = normTree(rightTree);
+        const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y);
+        const wallDistNorm = normTree(wallDist);
+
         const inputs = [
           this.x / canvas.width,
           this.y / canvas.height,
@@ -1408,7 +1527,11 @@
           packMates / 5,
           birds.filter(b => b.alive && !b.hiding).length / BIRD_COUNT,
           this.inNest ? 1 : 0,
-          this.huntBonus
+          this.huntBonus,
+          frontTreeNorm,
+          leftTreeNorm,
+          rightTreeNorm,
+          wallDistNorm
         ];
         
         const outputs = this.brain.forward(inputs);
@@ -1434,11 +1557,11 @@
         this.x += this.vx;
         this.y += this.vy;
         
-        if (this.x < 0) { this.x = 10; this.vx = Math.abs(this.vx) * 0.5; this.energy -= 25; }
-        if (this.x > canvas.width) { this.x = canvas.width - 10; this.vx = -Math.abs(this.vx) * 0.5; this.energy -= 25; }
-        if (this.y < 0) { this.y = 10; this.vy = Math.abs(this.vy) * 0.5; this.energy -= 25; }
-        if (this.y > GROUND_Y) { this.y = GROUND_Y - 10; this.vy = -Math.abs(this.vy) * 0.5; this.energy -= 25; }
-        
+        if (this.x < 0) { this.x = 10; this.vx = Math.abs(this.vx) * 0.5; this.energy -= 25; this.fitness -= 15; }
+        if (this.x > canvas.width) { this.x = canvas.width - 10; this.vx = -Math.abs(this.vx) * 0.5; this.energy -= 25; this.fitness -= 15; }
+        if (this.y < 0) { this.y = 10; this.vy = Math.abs(this.vy) * 0.5; this.energy -= 25; this.fitness -= 15; }
+        if (this.y > GROUND_Y) { this.y = GROUND_Y - 10; this.vy = -Math.abs(this.vy) * 0.5; this.energy -= 25; this.fitness -= 15; }
+
         // NYTT: Träd-kollision för fiende
         for (const tree of trees) {
           const predRadiusX = 16;
@@ -1450,26 +1573,66 @@
             if (this.y - predRadiusY < tree.y && this.vy > 0) {
               this.y = tree.y - predRadiusY;
               this.vy = -Math.abs(this.vy) * 0.3;
+              this.fitness -= 8;
             } else {
               if (this.vx > 0) {
                 this.x = tree.x - predRadiusX;
                 this.vx = -Math.abs(this.vx) * 0.5;
+                this.fitness -= 8;
               } else {
                 this.x = tree.x + tree.width + predRadiusX;
                 this.vx = Math.abs(this.vx) * 0.5;
+                this.fitness -= 8;
               }
             }
           }
         }
-        
+
+        const newTargetDist = target ? Math.hypot(this.x - target.x, this.y - target.y) : null;
+        if (previousTargetDist !== null && newTargetDist !== null) {
+          const chaseDelta = previousTargetDist - newTargetDist;
+          if (chaseDelta > 0) {
+            this.fitness += chaseDelta * 0.4;
+          } else if (chaseDelta < 0) {
+            this.fitness += chaseDelta * 0.2;
+          }
+        } else if (!target) {
+          if (birds.some(b => b.alive && !b.hiding)) {
+            this.fitness -= 0.4;
+          }
+        }
+
+        const updatedNestDist = Math.hypot(this.x - this.homeNest.x, this.y - this.homeNest.y);
+        const nestDelta = previousNestDist - updatedNestDist;
+        if (wantNest || this.energy < this.maxEnergy * 0.35) {
+          if (nestDelta > 0) {
+            this.fitness += nestDelta * 0.2;
+          } else if (nestDelta < 0) {
+            this.fitness += nestDelta * 0.1;
+          }
+        }
+
+        if (target && newTargetDist !== null && newTargetDist < 180) {
+          this.fitness += 1.5;
+        }
+
+        if (target && newTargetDist !== null && newTargetDist > 320) {
+          this.fitness -= 0.3;
+        }
+
+        this.prevNestDist = updatedNestDist;
+
         for (const b of birds) {
           if (!b.alive || b.hiding) continue;
           const d = Math.hypot(this.x - b.x, this.y - b.y);
           if (d < 18) {
             b.alive = false;
             if (b.hasTwig) { // Tappa kvist vid död
+              b.fitness = Math.max(0, b.fitness - TWIG_FITNESS_BONUS * TWIG_DEATH_RATIO);
               b.hasTwig.carriedBy = null;
               b.hasTwig = null;
+              b.twigLastDist = null;
+              b.twigCarryTime = 0;
             }
             this.energy = Math.min(this.energy + KILL_ENERGY, this.maxEnergy);
             this.fitness += KILL_FITNESS;
@@ -1486,6 +1649,8 @@
             }
           }
         }
+
+        this.prevTargetDist = (target && target.alive) ? Math.hypot(this.x - target.x, this.y - target.y) : null;
         
         if (wantNest || this.energy < this.maxEnergy * 0.5) { 
           if (distToNest < this.homeNest.radius) {
