@@ -206,6 +206,34 @@
     </div>
 
     <div class="section">
+      <div class="section-title collapsible collapsed" data-target="layout-controls">🧭 Layout Controls</div>
+      <div id="layout-controls" class="collapse-content hidden">
+        <div class="grid">
+          <div class="control">
+            <label>🪵 Twig Pile X</label>
+            <input type="range" id="twigPosX" min="50" max="1750" value="900">
+            <span class="chip" id="uiTwigPosX">900</span>
+          </div>
+          <div class="control">
+            <label>🪵 Twig Pile Y</label>
+            <input type="range" id="twigPosY" min="200" max="850" value="840">
+            <span class="chip" id="uiTwigPosY">840</span>
+          </div>
+          <div class="control">
+            <label>🎮 Playfield Offset X</label>
+            <input type="range" id="boardOffsetX" min="-400" max="400" value="0">
+            <span class="chip" id="uiBoardOffsetX">0</span>
+          </div>
+          <div class="control">
+            <label>🎮 Playfield Offset Y</label>
+            <input type="range" id="boardOffsetY" min="-200" max="200" value="0">
+            <span class="chip" id="uiBoardOffsetY">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title collapsible collapsed" data-target="hide-settings">🌳 Hide Spot Settings (Critical for Evolution!)</div>
       <div id="hide-settings" class="collapse-content hidden">
         <div class="grid">
@@ -554,10 +582,12 @@
     const GROUND_Y = canvas.height - 50;
     const NEST_X = 140;
     const NEST_Y = GROUND_Y - 140;
-    const TWIG_PILE_X = canvas.width / 2;
-    const TWIG_PILE_Y = GROUND_Y - 10;
+    let TWIG_PILE_X = canvas.width / 2;
+    let TWIG_PILE_Y = GROUND_Y - 10;
     const TWIG_PILE_WIDTH = 220;
     const TWIG_PILE_HEIGHT = 120;
+    let PLAYFIELD_OFFSET_X = 0;
+    let PLAYFIELD_OFFSET_Y = 0;
     const INITIAL_FOOD_COUNT = 25;
 
     const backgroundImage = new Image();
@@ -666,18 +696,71 @@
       TREE_COUNT = parseInt(e.target.value);
       document.getElementById('uiTreeCount').textContent = TREE_COUNT;
     });
-    
+
     // NYTT: Nest settings
     document.getElementById('twigCount').addEventListener('input', e => {
       TWIG_PILE_COUNT = parseInt(e.target.value);
       document.getElementById('uiTwigCount').textContent = TWIG_PILE_COUNT;
+      regenerateTwigPile();
     });
-    
+
     document.getElementById('twigBonus').addEventListener('input', e => {
       TWIG_FITNESS_BONUS = parseInt(e.target.value);
       document.getElementById('uiTwigBonus').textContent = TWIG_FITNESS_BONUS;
     });
-    
+
+    const twigPosXInput = document.getElementById('twigPosX');
+    const twigPosYInput = document.getElementById('twigPosY');
+    const boardOffsetXInput = document.getElementById('boardOffsetX');
+    const boardOffsetYInput = document.getElementById('boardOffsetY');
+
+    const applyBoardOffset = () => {
+      canvas.style.transform = `translate(${PLAYFIELD_OFFSET_X}px, ${PLAYFIELD_OFFSET_Y}px)`;
+    };
+
+    twigPosXInput.addEventListener('input', e => {
+      const value = parseInt(e.target.value, 10);
+      if (Number.isNaN(value)) return;
+      TWIG_PILE_X = value;
+      document.getElementById('uiTwigPosX').textContent = TWIG_PILE_X;
+      regenerateTwigPile();
+    });
+
+    twigPosYInput.addEventListener('input', e => {
+      const value = parseInt(e.target.value, 10);
+      if (Number.isNaN(value)) return;
+      TWIG_PILE_Y = Math.max(100, Math.min(GROUND_Y - 10, value));
+      e.target.value = TWIG_PILE_Y;
+      document.getElementById('uiTwigPosY').textContent = TWIG_PILE_Y;
+      regenerateTwigPile();
+    });
+
+    boardOffsetXInput.addEventListener('input', e => {
+      const value = parseInt(e.target.value, 10);
+      if (Number.isNaN(value)) return;
+      PLAYFIELD_OFFSET_X = value;
+      document.getElementById('uiBoardOffsetX').textContent = PLAYFIELD_OFFSET_X;
+      applyBoardOffset();
+    });
+
+    boardOffsetYInput.addEventListener('input', e => {
+      const value = parseInt(e.target.value, 10);
+      if (Number.isNaN(value)) return;
+      PLAYFIELD_OFFSET_Y = value;
+      document.getElementById('uiBoardOffsetY').textContent = PLAYFIELD_OFFSET_Y;
+      applyBoardOffset();
+    });
+
+    twigPosXInput.value = Math.round(TWIG_PILE_X);
+    document.getElementById('uiTwigPosX').textContent = Math.round(TWIG_PILE_X);
+    twigPosYInput.value = Math.round(TWIG_PILE_Y);
+    document.getElementById('uiTwigPosY').textContent = Math.round(TWIG_PILE_Y);
+    boardOffsetXInput.value = PLAYFIELD_OFFSET_X;
+    document.getElementById('uiBoardOffsetX').textContent = PLAYFIELD_OFFSET_X;
+    boardOffsetYInput.value = PLAYFIELD_OFFSET_Y;
+    document.getElementById('uiBoardOffsetY').textContent = PLAYFIELD_OFFSET_Y;
+    applyBoardOffset();
+
     // Hide settings
     document.getElementById('maxHideTime').addEventListener('input', e => {
       MAX_HIDE_TIME = parseInt(e.target.value);
@@ -1234,6 +1317,17 @@
         ctx.textBaseline = 'middle';
         ctx.fillText(`${this.twigs}`, this.x, badgeY + badgeHeight / 2);
       }
+    }
+
+    function regenerateTwigPile() {
+      const newPile = [];
+      for (let i = 0; i < TWIG_PILE_COUNT; i++) {
+        const heightFactor = Math.random();
+        const twigY = TWIG_PILE_Y - heightFactor * TWIG_PILE_HEIGHT;
+        const twigX = TWIG_PILE_X + (Math.random() - 0.5) * TWIG_PILE_WIDTH * (0.7 + 0.3 * heightFactor);
+        newPile.push(new Twig(twigX, twigY));
+      }
+      twigPile = newPile;
     }
 
     class Brain {
@@ -2415,15 +2509,7 @@
       
       // NYTT: Init Bo & Kvistar
       birdNest = new BirdNest(NEST_X, NEST_Y); // Bottom left
-      twigPile = [];
-      const pileX = TWIG_PILE_X;
-      const pileY = TWIG_PILE_Y;
-      for (let i = 0; i < TWIG_PILE_COUNT; i++) {
-        const offsetX = (Math.random() - 0.5) * TWIG_PILE_WIDTH;
-        const heightFactor = Math.random();
-        const twigY = pileY - heightFactor * TWIG_PILE_HEIGHT;
-        twigPile.push(new Twig(pileX + offsetX * (0.7 + 0.3 * heightFactor), twigY));
-      }
+      regenerateTwigPile();
       twigsInNest = 0;
 
       grassBlades = [];
@@ -2555,14 +2641,7 @@
       
       // Reset the nest for the next generation
       birdNest = new BirdNest(NEST_X, NEST_Y);
-      twigPile = [];
-      const pileX = TWIG_PILE_X;
-      const pileY = TWIG_PILE_Y;
-      for (let i = 0; i < TWIG_PILE_COUNT; i++) {
-        const heightFactor = Math.random();
-        const twigY = pileY - heightFactor * TWIG_PILE_HEIGHT;
-        twigPile.push(new Twig(pileX + (Math.random() - 0.5) * TWIG_PILE_WIDTH * (0.7 + 0.3 * heightFactor), twigY));
-      }
+      regenerateTwigPile();
       twigsInNest = 0;
 
       seedInitialFood();
