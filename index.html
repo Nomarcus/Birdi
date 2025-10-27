@@ -1785,6 +1785,9 @@
         
         // NEW: Distance to nest
         const nestDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
+        const distToEnemyNest = enemyNest
+          ? Math.hypot(this.x - enemyNest.x, this.y - enemyNest.y)
+          : Infinity;
         
         let nearbyBirds = 0;
         for (const b of birds) {
@@ -1871,36 +1874,36 @@
             this.twigLastDist = null;
             this.twigCarryTime = 0;
           } else {
-          const distToHouse = distToEnemyNest;
-          if (this.twigLastDist === null) {
-            this.twigLastDist = distToHouse;
-          } else {
-            const progress = this.twigLastDist - distToHouse;
-            if (progress > 0) {
-              this.fitness += progress * TWIG_PROGRESS_FACTOR;
-            } else if (progress < 0) {
-              this.fitness += progress * TWIG_BACKTRACK_FACTOR;
+            const distToHouse = distToEnemyNest;
+            if (this.twigLastDist === null) {
+              this.twigLastDist = distToHouse;
+            } else {
+              const progress = this.twigLastDist - distToHouse;
+              if (progress > 0) {
+                this.fitness += progress * TWIG_PROGRESS_FACTOR;
+              } else if (progress < 0) {
+                this.fitness += progress * TWIG_BACKTRACK_FACTOR;
+              }
             }
-          }
-          this.twigCarryTime++;
-          if (this.twigCarryTime > 0 && this.twigCarryTime % TWIG_IDLE_INTERVAL === 0) {
-            this.fitness -= TWIG_IDLE_PENALTY;
-          }
-          this.twigLastDist = distToHouse;
-          if (enemyNest && distToHouse < enemyNest.radius + 20) {
-            enemyNest.addTwig();
-            if (this.hasTwig) this.hasTwig.carriedBy = null;
-            twigPile = twigPile.filter(t => t !== this.hasTwig);
-            this.hasTwig = null;
-            this.twigLastDist = null;
-            this.twigCarryTime = 0;
-            this.fitness += TWIG_FITNESS_BONUS;
-            enemyTwigsInNest++;
-            recordLargestEnemyNest = Math.max(recordLargestEnemyNest, enemyTwigsInNest);
-            telemetry.enemyTwigDeliveries += 1;
-          }
-          target = null;
-          minDist = Infinity;
+            this.twigCarryTime++;
+            if (this.twigCarryTime > 0 && this.twigCarryTime % TWIG_IDLE_INTERVAL === 0) {
+              this.fitness -= TWIG_IDLE_PENALTY;
+            }
+            this.twigLastDist = distToHouse;
+            if (enemyNest && distToHouse < enemyNest.radius + 20) {
+              enemyNest.addTwig();
+              if (this.hasTwig) this.hasTwig.carriedBy = null;
+              twigPile = twigPile.filter(t => t !== this.hasTwig);
+              this.hasTwig = null;
+              this.twigLastDist = null;
+              this.twigCarryTime = 0;
+              this.fitness += TWIG_FITNESS_BONUS;
+              enemyTwigsInNest++;
+              recordLargestEnemyNest = Math.max(recordLargestEnemyNest, enemyTwigsInNest);
+              telemetry.enemyTwigDeliveries += 1;
+            }
+            target = null;
+            minDist = Infinity;
           }
         } else {
           let stoleTwig = false;
@@ -1914,7 +1917,7 @@
               bird.twigLastDist = null;
               bird.twigCarryTime = 0;
               this.hasTwig = twig;
-              this.twigLastDist = enemyNest ? Math.hypot(this.x - enemyNest.x, this.y - enemyNest.y) : null;
+              this.twigLastDist = isFinite(distToEnemyNest) ? distToEnemyNest : null;
               this.twigCarryTime = 0;
               this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
               stoleTwig = true;
@@ -1926,7 +1929,7 @@
               if (!t.carriedBy && Math.hypot(this.x - t.x, this.y - t.y) < 35) {
                 this.hasTwig = t;
                 t.carriedBy = this;
-                this.twigLastDist = enemyNest ? Math.hypot(this.x - enemyNest.x, this.y - enemyNest.y) : null;
+                this.twigLastDist = isFinite(distToEnemyNest) ? distToEnemyNest : null;
                 this.twigCarryTime = 0;
                 this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
                 break;
