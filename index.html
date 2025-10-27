@@ -825,7 +825,14 @@
     const birdhouseSprite = new Image();
     birdhouseSprite.src = 'assets/birdhouse.svg';
     let birdhouseReady = false;
-    birdhouseSprite.onload = () => { birdhouseReady = true; };
+    let birdhouseAspectRatio = 1;
+    birdhouseSprite.onload = () => {
+      birdhouseReady = true;
+      const { naturalWidth, naturalHeight } = birdhouseSprite;
+      if (naturalWidth && naturalHeight) {
+        birdhouseAspectRatio = naturalHeight / naturalWidth;
+      }
+    };
     
     const BIRD_TYPES = {
       SCOUT: { color: '#FFD700', speed: 1.4, vision: 1.3, stamina: 0.8, name: 'Scout' },
@@ -1445,7 +1452,7 @@
       }
       draw() {
         const spriteWidth = this.radius * 2.6;
-        const spriteHeight = spriteWidth * 1.9;
+        const spriteHeight = spriteWidth * (birdhouseReady ? birdhouseAspectRatio : 1.9);
         const spriteX = this.x - spriteWidth / 2;
         const defaultY = this.y - spriteHeight * 0.55;
         const spriteY = Math.min(defaultY, GROUND_Y - spriteHeight + 20);
