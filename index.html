@@ -1986,8 +1986,6 @@
         this.angle = options.angle || 0;
         this.trunkColor = '#5D4037';
         this.canopyRingColor = `hsl(120, 55%, ${32 + Math.random() * 6}%)`;
-        this.canopyCoreColor = `hsl(90, 50%, ${60 + Math.random() * 8}%)`;
-        this.canopyOutlineColor = `hsl(120, 45%, ${24 + Math.random() * 6}%)`;
         this.updateGeometry();
       }
       updateGeometry() {
@@ -1997,7 +1995,7 @@
         this.centerY = this.y + this.halfHeight;
         this.canopyRadius = Math.max(this.width, this.height) * 0.6;
         this.canopyOffsetY = -this.halfHeight - this.canopyRadius * 0.35;
-        this.ringWidth = this.canopyRadius * 0.45;
+        this.ringLineWidth = Math.max(4, this.canopyRadius * 0.18);
       }
       setRect(x, y, width, height) {
         this.width = Math.max(20, width);
@@ -2119,24 +2117,10 @@
         ctx.translate(this.centerX, this.centerY);
         ctx.rotate(this.angle);
 
-        ctx.fillStyle = this.trunkColor;
-        ctx.fillRect(-this.halfWidth, -this.halfHeight, this.width, this.height);
-
         ctx.save();
         ctx.translate(0, this.canopyOffsetY);
         ctx.strokeStyle = this.canopyRingColor;
-        ctx.lineWidth = this.ringWidth;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, this.canopyRadius, this.canopyRadius * 0.7, 0, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = this.canopyCoreColor;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, this.canopyRadius * 0.55, this.canopyRadius * 0.45, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = this.canopyOutlineColor;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = this.ringLineWidth;
         ctx.beginPath();
         ctx.ellipse(0, 0, this.canopyRadius, this.canopyRadius * 0.7, 0, 0, Math.PI * 2);
         ctx.stroke();
