@@ -131,7 +131,8 @@
       <div class="legend-item"><div class="legend-dot" style="background:#4CAF50;"></div>Thinker (Clever)</div>
       <div class="legend-item"><div class="legend-dot" style="background:#2196F3;"></div>Flocker (Social)</div>
       <div class="legend-item"><div class="legend-dot" style="background:#9C27B0;"></div>Predator (Immortal)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#3ECF5B;"></div>Hide Spot</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3ECF5B;"></div>Bird Safe Zone</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F87171;"></div>Enemy Safe Zone</div>
       <div class="legend-item"><div class="legend-rect" style="background:#006400;"></div>Tree (Obstacle)</div>
       <div class="legend-item"><div class="legend-line" style="background:#D2691E;"></div>Twig</div>
       <div class="legend-item"><div class="legend-dot" style="background:#A0522D;"></div>Bird Nest</div>
@@ -144,7 +145,7 @@
     </div>
 
     <div class="tip danger">
-      ⚠️ <strong>HIDE SPOTS:</strong> Birds can hide for a <strong>maximum of 3 seconds</strong> (180 frames),
+      ⚠️ <strong>SAFE ZONES:</strong> Birds can hide for a <strong>maximum of 3 seconds</strong> (180 frames),
       then they MUST leave for a <strong>5 second cooldown</strong>.
     </div>
 
@@ -173,12 +174,12 @@
             <span class="chip" id="uiFoodRate">8</span>
           </div>
           <div class="control">
-            <label>🌳 Hide Spots Count</label>
+            <label>🛡️ Bird Safe Zones</label>
             <input type="range" id="hideSpots" min="3" max="15" value="6">
             <span class="chip ok" id="uiHideSpots">6</span>
           </div>
           <div class="control">
-            <label>🏠 Capacity per Hide Spot</label>
+            <label>👥 Capacity per Safe Zone</label>
             <input type="range" id="hideCapacity" min="1" max="8" value="3">
             <span class="chip" id="uiHideCapacity">3</span>
           </div>
@@ -238,7 +239,7 @@
     </div>
 
     <div class="section">
-      <div class="section-title collapsible collapsed" data-target="hide-settings">🌳 Hide Spot Settings (Critical for Evolution!)</div>
+      <div class="section-title collapsible collapsed" data-target="hide-settings">🛡️ Safe Zone Settings (Critical for Evolution!)</div>
       <div id="hide-settings" class="collapse-content hidden">
         <div class="grid">
           <div class="control">
@@ -367,6 +368,11 @@
             <label>⚡ Hunt Speed</label>
             <input type="range" id="predSpeed" min="4" max="14" value="7">
             <span class="chip danger" id="uiPredSpeed">7</span>
+          </div>
+          <div class="control">
+            <label>🛡️ Enemy Safe Zones</label>
+            <input type="range" id="predSafeZones" min="1" max="12" value="2">
+            <span class="chip danger" id="uiPredSafeZones">2</span>
           </div>
           <div class="control">
             <label>🔋 Nest Charge Speed</label>
@@ -507,7 +513,7 @@
           <div class="stat-value" id="predsCharging">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">🌳 In Hide Spots</div>
+          <div class="stat-label">🛡️ In Safe Zones</div>
           <div class="stat-value" id="birdsHiding">0</div>
         </div>
         <div class="stat-card">
@@ -643,6 +649,7 @@
     let FOOD_SPAWN_RATE = 8;
     let HIDE_SPOT_COUNT = 6;
     let HIDE_CAPACITY = 3;
+    let PRED_SAFE_ZONE_COUNT = 2;
     let TREE_COUNT = 0; // NEW
     
     // NEW: Nest building
@@ -785,12 +792,97 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const GROUND_Y = canvas.height - 50;
+    const SAFE_ZONE_PADDING_Y = 170;
     const NEST_X = 140;
     const NEST_Y = GROUND_Y - 140;
     const ENEMY_NEST_X = canvas.width - 140;
     const ENEMY_NEST_Y = GROUND_Y - 140;
     let TWIG_PILE_X = canvas.width / 2;
     let TWIG_PILE_Y = GROUND_Y - 10;
+
+    const getDefaultSafeZonePosition = (index, total, side = 'bird') => {
+      const count = Math.max(1, total);
+      const span = Math.max(0, GROUND_Y - SAFE_ZONE_PADDING_Y * 2);
+      const step = count > 1 ? span / (count - 1) : 0;
+      let y = count > 1 ? SAFE_ZONE_PADDING_Y + step * index : GROUND_Y / 2;
+      y = Math.max(SAFE_ZONE_PADDING_Y, Math.min(GROUND_Y - SAFE_ZONE_PADDING_Y, y));
+      const x = side === 'predator' ? canvas.width - 260 : 260;
+      return { x, y };
+    };
+
+    let draggingZone = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    const getCanvasPoint = evt => {
+      const source = evt.touches ? evt.touches[0] : evt.changedTouches ? evt.changedTouches[0] : evt;
+      if (!source) return null;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (source.clientX - rect.left) * scaleX,
+        y: (source.clientY - rect.top) * scaleY
+      };
+    };
+
+    const clampZonePosition = (x, y, radius) => {
+      const clampedX = Math.max(radius, Math.min(canvas.width - radius, x));
+      const clampedY = Math.max(radius, Math.min(GROUND_Y - radius, y));
+      return { x: clampedX, y: clampedY };
+    };
+
+    const stopDragging = () => {
+      draggingZone = null;
+      dragOffsetX = 0;
+      dragOffsetY = 0;
+    };
+
+    const tryStartDrag = evt => {
+      const point = getCanvasPoint(evt);
+      if (!point) return;
+
+      for (let i = hideSpots.length - 1; i >= 0; i--) {
+        const zone = hideSpots[i];
+        if (zone.containsPoint(point.x, point.y)) {
+          draggingZone = zone;
+          dragOffsetX = zone.x - point.x;
+          dragOffsetY = zone.y - point.y;
+          evt.preventDefault();
+          return;
+        }
+      }
+
+      for (let i = predNests.length - 1; i >= 0; i--) {
+        const zone = predNests[i];
+        if (zone.containsPoint(point.x, point.y)) {
+          draggingZone = zone;
+          dragOffsetX = zone.x - point.x;
+          dragOffsetY = zone.y - point.y;
+          evt.preventDefault();
+          return;
+        }
+      }
+    };
+
+    const continueDrag = evt => {
+      if (!draggingZone) return;
+      const point = getCanvasPoint(evt);
+      if (!point) return;
+      const { radius } = draggingZone;
+      const next = clampZonePosition(point.x + dragOffsetX, point.y + dragOffsetY, radius);
+      draggingZone.moveTo(next.x, next.y);
+      evt.preventDefault();
+    };
+
+    canvas.addEventListener('mousedown', tryStartDrag);
+    canvas.addEventListener('touchstart', tryStartDrag, { passive: false });
+    canvas.addEventListener('mousemove', continueDrag);
+    canvas.addEventListener('touchmove', continueDrag, { passive: false });
+    canvas.addEventListener('mouseleave', stopDragging);
+    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('touchend', stopDragging);
+    window.addEventListener('touchcancel', stopDragging);
 
     function sampleRay(x, y, a, maxD = RAY_RANGE, step = 6) { // @added
       const dx = Math.cos(a), dy = Math.sin(a); // @added
@@ -905,14 +997,11 @@
     });
     
     const syncPredatorCount = () => {
+      ensurePredatorSafeZones(PRED_SAFE_ZONE_COUNT);
+
       if (PRED_COUNT <= 0) {
         predators = [];
-        buildPredatorNests(0);
         return;
-      }
-
-      if (!predNests.length) {
-        buildPredatorNests(PRED_COUNT);
       }
 
       if (predators.length > PRED_COUNT) {
@@ -922,6 +1011,8 @@
           predators.push(new Predator());
         }
       }
+
+      assignPredatorHomes();
     };
 
     document.getElementById('predCount').addEventListener('input', e => {
@@ -938,6 +1029,7 @@
     document.getElementById('hideSpots').addEventListener('input', e => {
       HIDE_SPOT_COUNT = parseInt(e.target.value);
       document.getElementById('uiHideSpots').textContent = HIDE_SPOT_COUNT;
+      ensureHideSpotCount(HIDE_SPOT_COUNT);
     });
     
     document.getElementById('hideCapacity').addEventListener('input', e => {
@@ -945,6 +1037,14 @@
       document.getElementById('uiHideCapacity').textContent = HIDE_CAPACITY;
       hideSpots.forEach(h => h.capacity = HIDE_CAPACITY);
     });
+
+    document.getElementById('predSafeZones').addEventListener('input', e => {
+      PRED_SAFE_ZONE_COUNT = parseInt(e.target.value);
+      document.getElementById('uiPredSafeZones').textContent = PRED_SAFE_ZONE_COUNT;
+      ensurePredatorSafeZones(PRED_SAFE_ZONE_COUNT);
+    });
+
+    document.getElementById('uiPredSafeZones').textContent = PRED_SAFE_ZONE_COUNT;
     
     document.getElementById('treeCount').addEventListener('input', e => { // NYTT
       TREE_COUNT = parseInt(e.target.value);
@@ -1295,7 +1395,7 @@
       constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.radius = 50;
+        this.radius = 65;
         this.capacity = HIDE_CAPACITY;
         this.occupants = [];
       }
@@ -1313,77 +1413,96 @@
         const idx = this.occupants.indexOf(bird);
         if (idx >= 0) this.occupants.splice(idx, 1);
       }
+      containsPoint(px, py) {
+        return Math.hypot(this.x - px, this.y - py) <= this.radius;
+      }
+      moveTo(nx, ny) {
+        this.x = nx;
+        this.y = ny;
+        this.occupants.forEach(bird => {
+          if (bird.hideSpot === this && bird.hiding) {
+            bird.x = nx;
+            bird.y = ny;
+          }
+        });
+      }
       draw() {
-        const ringWidth = 14;
-        const ringRadius = this.radius - ringWidth / 2;
-
         ctx.save();
 
-        // Glow
-        const glowGrad = ctx.createRadialGradient(this.x, this.y, ringRadius * 0.3, this.x, this.y, ringRadius + ringWidth);
-        glowGrad.addColorStop(0, 'rgba(142, 211, 123, 0.45)');
-        glowGrad.addColorStop(1, 'rgba(142, 211, 123, 0)');
-        ctx.fillStyle = glowGrad;
+        const field = ctx.createRadialGradient(this.x, this.y, this.radius * 0.1, this.x, this.y, this.radius);
+        field.addColorStop(0, 'rgba(62, 207, 91, 0.55)');
+        field.addColorStop(1, 'rgba(62, 207, 91, 0.05)');
+        ctx.fillStyle = field;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, ringRadius + ringWidth, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Ring
-        const ringGrad = ctx.createLinearGradient(this.x, this.y - ringRadius, this.x, this.y + ringRadius);
-        ringGrad.addColorStop(0, '#3ecf5b');
-        ringGrad.addColorStop(1, '#1f8f3c');
-        ctx.strokeStyle = ringGrad;
-        ctx.lineWidth = ringWidth;
+        ctx.strokeStyle = 'rgba(46, 125, 50, 0.85)';
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, ringRadius, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius - ctx.lineWidth * 0.6, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Inner field
-        const innerGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, ringRadius * 0.75);
-        innerGrad.addColorStop(0, 'rgba(26, 73, 37, 0.75)');
-        innerGrad.addColorStop(1, 'rgba(26, 73, 37, 0.35)');
-        ctx.fillStyle = innerGrad;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, ringRadius * 0.75, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Icon
-        ctx.fillStyle = '#d5f8d7';
-        ctx.font = '28px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🛡️', this.x, this.y - 6);
+        ctx.font = 'bold 26px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+        ctx.fillText('🪶', this.x, this.y - 16);
 
-        // Capacity text
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.font = 'bold 16px "Segoe UI", sans-serif';
-        ctx.fillText(`${this.occupants.length}/${this.capacity}`, this.x, this.y + 20);
+        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+        ctx.fillText(`${this.occupants.length}/${this.capacity}`, this.x, this.y + 14);
 
         ctx.restore();
       }
     }
-    
+
     class PredatorNest {
       constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.radius = 60;
+        this.radius = 65;
       }
       draw() {
-        ctx.fillStyle = '#3C2F2F';
+        ctx.save();
+
+        const glow = ctx.createRadialGradient(this.x, this.y, this.radius * 0.1, this.x, this.y, this.radius);
+        glow.addColorStop(0, 'rgba(239, 68, 68, 0.55)');
+        glow.addColorStop(1, 'rgba(127, 29, 29, 0.08)');
+        ctx.fillStyle = glow;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.strokeStyle = '#1C1C1C';
-        ctx.lineWidth = 4;
+
+        ctx.strokeStyle = 'rgba(220, 38, 38, 0.85)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius - ctx.lineWidth * 0.6, 0, Math.PI * 2);
         ctx.stroke();
-        
-        ctx.fillStyle = '#FF4444';
-        ctx.font = 'bold 24px Arial';
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('⚡', this.x, this.y);
+        ctx.font = 'bold 28px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+        ctx.fillText('⚡', this.x, this.y - 12);
+
+        ctx.font = 'bold 14px "Segoe UI", sans-serif';
+        const charging = predators.filter(p => p.homeNest === this && p.inNest).length;
+        ctx.fillText(`${charging}`, this.x, this.y + 14);
+
+        ctx.restore();
+      }
+      containsPoint(px, py) {
+        return Math.hypot(this.x - px, this.y - py) <= this.radius;
+      }
+      moveTo(nx, ny) {
+        this.x = nx;
+        this.y = ny;
+        predators.forEach(pred => {
+          if (pred.homeNest === this && pred.inNest) {
+            pred.x = nx;
+            pred.y = ny;
+          }
+        });
       }
     }
     
@@ -1425,6 +1544,59 @@
         ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
         ctx.stroke();
       }
+    }
+
+    function ensureHideSpotCount(targetCount = HIDE_SPOT_COUNT) {
+      const desired = Math.max(0, targetCount);
+      while (hideSpots.length > desired) {
+        const zone = hideSpots.pop();
+        if (!zone) break;
+        zone.occupants.slice().forEach(bird => {
+          zone.removeBird(bird);
+          if (bird.hideSpot === zone) {
+            bird.hiding = false;
+            bird.hideSpot = null;
+            bird.hidingTime = 0;
+            bird.hideCooldown = HIDE_COOLDOWN;
+          }
+        });
+      }
+      for (let i = hideSpots.length; i < desired; i++) {
+        const pos = getDefaultSafeZonePosition(i, desired, 'bird');
+        const zone = new HideSpot(pos.x, pos.y);
+        zone.capacity = HIDE_CAPACITY;
+        hideSpots.push(zone);
+      }
+      hideSpots.forEach(zone => {
+        zone.capacity = HIDE_CAPACITY;
+      });
+    }
+
+    function assignPredatorHomes() {
+      if (!predators || !predators.length) return;
+      if (!predNests.length) return;
+      const available = predNests.length;
+      predators.forEach((pred, index) => {
+        if (!pred) return;
+        const nest = predNests[index % available];
+        pred.homeNest = nest;
+        if (pred.inNest) {
+          pred.x = nest.x;
+          pred.y = nest.y;
+        }
+      });
+    }
+
+    function ensurePredatorSafeZones(targetCount = PRED_SAFE_ZONE_COUNT) {
+      const desired = Math.max(1, targetCount);
+      while (predNests.length > desired) {
+        predNests.pop();
+      }
+      for (let i = predNests.length; i < desired; i++) {
+        const pos = getDefaultSafeZonePosition(i, desired, 'predator');
+        predNests.push(new PredatorNest(pos.x, pos.y));
+      }
+      assignPredatorHomes();
     }
     
     // NEW: Twig class
@@ -3238,52 +3410,16 @@
       }
     }
     
-    function buildPredatorNests(count) {
-      predNests = [];
-      if (count <= 0) return;
-
-      const nestCenterX = canvas.width - 220;
-      const nestOffsetX = 90;
-      const nestStartY = 160;
-      const nestSpacingY = 200;
-      let nestsPlaced = 0;
-      let row = 0;
-
-      while (nestsPlaced < count) {
-        const remaining = count - nestsPlaced;
-        const y = nestStartY + row * nestSpacingY;
-        if (remaining === 1) {
-          predNests.push(new PredatorNest(nestCenterX, y));
-          nestsPlaced += 1;
-        } else {
-          predNests.push(new PredatorNest(nestCenterX - nestOffsetX, y));
-          if (nestsPlaced + 1 < count) {
-            predNests.push(new PredatorNest(nestCenterX + nestOffsetX, y));
-            nestsPlaced += 2;
-          } else {
-            nestsPlaced += 1;
-          }
-        }
-        row++;
-      }
+    function buildPredatorNests(count = PRED_SAFE_ZONE_COUNT) {
+      ensurePredatorSafeZones(count);
     }
 
     // Init functions
     function initEnvironment() {
-      hideSpots = [];
-      const hidePositions = [
-        {x: 250, y: 200}, {x: 400, y: 350}, {x: 200, y: 500},
-        {x: 550, y: 250}, {x: 650, y: 450}, {x: 450, y: 600},
-        {x: 350, y: 700}, {x: 800, y: 300}, {x: 900, y: 550},
-        {x: 750, y: 700}, {x: 300, y: 400}, {x: 600, y: 650},
-        {x: 500, y: 150}, {x: 700, y: 200}, {x: 850, y: 450}
-      ];
-      for (let i = 0; i < HIDE_SPOT_COUNT; i++) {
-        const pos = hidePositions[i % hidePositions.length];
-        hideSpots.push(new HideSpot(pos.x, pos.y));
-      }
-      buildPredatorNests(PRED_COUNT);
-      
+      ensureHideSpotCount(HIDE_SPOT_COUNT);
+      hideSpots.forEach(zone => zone.occupants = []);
+      buildPredatorNests(PRED_SAFE_ZONE_COUNT);
+
       // NEW: Init Trees
       trees = [];
       for (let i = 0; i < TREE_COUNT; i++) {
@@ -3342,6 +3478,7 @@
       for (let i = 0; i < PRED_COUNT; i++) {
         predators.push(new Predator());
       }
+      assignPredatorHomes();
     }
 
     function spawnFood() {
@@ -3400,10 +3537,9 @@
     function evolvePredators() {
       predators.sort((a, b) => b.fitness - a.fitness);
       const newPreds = [];
-      
+
       if (PRED_COUNT === 0) {
         predators = [];
-        buildPredatorNests(0);
         return;
       }
 
