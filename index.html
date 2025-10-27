@@ -25,6 +25,7 @@
     .btn.secondary{ background:var(--accent); box-shadow:0 6px 20px rgba(13,110,253,.3); }
     .btn.danger{ background:var(--danger); box-shadow:0 6px 20px rgba(220,53,69,.3); }
     .btn:hover{ transform:translateY(-2px); filter:brightness(1.1); }
+    .btn:disabled{ opacity:0.55; cursor:not-allowed; filter:grayscale(0.3); box-shadow:none; }
     .speed-control{ display:flex; align-items:center; gap:12px; padding:10px 18px; border-radius:12px;
       background:rgba(255,255,255,0.7); border:2px solid rgba(255,255,255,0.6);
       box-shadow:0 6px 18px rgba(0,0,0,0.12); backdrop-filter:blur(12px); }
@@ -234,6 +235,46 @@
             <input type="range" id="boardOffsetY" min="-200" max="200" value="0">
             <span class="chip" id="uiBoardOffsetY">0</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title collapsible collapsed" data-target="obstacle-editor">🧱 Obstacle Editor</div>
+      <div id="obstacle-editor" class="collapse-content hidden">
+        <div class="grid">
+          <div class="control" style="gap:16px;">
+            <label style="display:flex; align-items:center; gap:12px; font-weight:800;">
+              <input type="checkbox" id="toggleObstacleEditor">
+              Enable obstacle editing (pauses the flock)
+            </label>
+          </div>
+          <div class="control" style="flex-wrap:wrap; gap:16px;">
+            <label style="font-weight:800;">Placement tools</label>
+            <div class="btn-group" style="gap:10px;">
+              <button class="btn secondary" id="btnAddObstacle" type="button">➕ Place obstacle</button>
+              <button class="btn danger" id="btnDeleteObstacle" type="button">🗑️ Delete selected</button>
+            </div>
+          </div>
+          <div class="control">
+            <label>Width</label>
+            <input type="range" id="obstacleWidth" min="20" max="600" value="160" disabled>
+            <span class="chip" id="uiObstacleWidth">160px</span>
+          </div>
+          <div class="control">
+            <label>Height</label>
+            <input type="range" id="obstacleHeight" min="30" max="650" value="220" disabled>
+            <span class="chip" id="uiObstacleHeight">220px</span>
+          </div>
+          <div class="control">
+            <label>Rotation</label>
+            <input type="range" id="obstacleRotation" min="-90" max="90" value="0" disabled>
+            <span class="chip" id="uiObstacleRotation">0°</span>
+          </div>
+        </div>
+        <div class="tip info" style="margin-top:16px;">
+          ✅ <strong>Tips:</strong> Click an obstacle to select it. Drag to move, drag the blue rotation handle to spin,
+          or use the sliders for precise adjustments. Press <strong>Esc</strong> to cancel placement.
         </div>
       </div>
     </div>
@@ -766,6 +807,19 @@
     let birdNest = null; // NYTT
     let enemyNest = null;
     let grassBlades = [];
+    let customTreeLayout = null;
+
+    const obstacleEditor = {
+      enabled: false,
+      mode: 'idle',
+      selected: null,
+      hoverHandle: null,
+      dragOffset: { x: 0, y: 0 },
+      createStart: null,
+      pendingTree: null,
+      handleState: null,
+      geometryDirty: false
+    };
 
     let recordBestFitness = 0;
     let recordLongestLife = 0;
@@ -832,13 +886,233 @@
       return { x: clampedX, y: clampedY };
     };
 
+    const getTreeAtPoint = (x, y) => {
+      for (let i = trees.length - 1; i >= 0; i--) {
+        if (trees[i].containsPoint(x, y)) return trees[i];
+      }
+      return null;
+    };
+
+    const updateObstacleHover = point => {
+      if (!obstacleEditor.enabled || obstacleEditor.mode !== 'idle') return;
+      if (!obstacleEditor.selected) {
+        obstacleEditor.hoverHandle = null;
+        return;
+      }
+      const handle = obstacleEditor.selected.getHandleAt(point.x, point.y);
+      obstacleEditor.hoverHandle = handle ? { type: handle.type, axis: handle.axis } : null;
+    };
+
+    const handleObstacleEditorPointerDown = evt => {
+      const point = getCanvasPoint(evt);
+      if (!point) return;
+
+      if (obstacleEditor.mode === 'await-create') {
+        obstacleEditor.mode = 'creating';
+        obstacleEditor.createStart = point;
+        obstacleEditor.pendingTree = null;
+        obstacleEditor.geometryDirty = false;
+        evt.preventDefault();
+        return;
+      }
+
+      if (obstacleEditor.selected) {
+        const handle = obstacleEditor.selected.getHandleAt(point.x, point.y);
+        if (handle) {
+          if (handle.type === 'rotate') {
+            const pointerAngle = Math.atan2(point.y - obstacleEditor.selected.centerY, point.x - obstacleEditor.selected.centerX);
+            const offset = obstacleEditor.selected.angle - (pointerAngle + Math.PI / 2);
+            obstacleEditor.mode = 'rotate';
+            obstacleEditor.handleState = {
+              type: 'rotate',
+              offset,
+              origin: {
+                centerX: obstacleEditor.selected.centerX,
+                centerY: obstacleEditor.selected.centerY
+              }
+            };
+          } else if (handle.type === 'resize') {
+            obstacleEditor.mode = 'resize';
+            obstacleEditor.handleState = {
+              type: 'resize',
+              side: handle.axis,
+              original: {
+                centerX: obstacleEditor.selected.centerX,
+                centerY: obstacleEditor.selected.centerY,
+                width: obstacleEditor.selected.width,
+                height: obstacleEditor.selected.height,
+                angle: obstacleEditor.selected.angle
+              }
+            };
+          }
+          evt.preventDefault();
+          return;
+        }
+      }
+
+      const targetTree = getTreeAtPoint(point.x, point.y);
+      if (targetTree) {
+        if (obstacleEditor.selected !== targetTree) {
+          setSelectedTree(targetTree);
+        }
+        obstacleEditor.mode = 'move';
+        obstacleEditor.handleState = {
+          type: 'move',
+          offsetX: point.x - targetTree.centerX,
+          offsetY: point.y - targetTree.centerY
+        };
+        evt.preventDefault();
+        return;
+      }
+
+      setSelectedTree(null);
+      obstacleEditor.mode = 'idle';
+    };
+
+    const handleObstacleEditorPointerMove = evt => {
+      const point = getCanvasPoint(evt);
+      if (!point) return;
+
+      if (obstacleEditor.mode === 'creating') {
+        const start = obstacleEditor.createStart || point;
+        const x = Math.min(start.x, point.x);
+        const y = Math.min(start.y, point.y);
+        const width = Math.max(20, Math.abs(point.x - start.x));
+        const height = Math.max(30, Math.abs(point.y - start.y));
+        if (!obstacleEditor.pendingTree) {
+          const tree = Tree.fromRect(x, y, width, height);
+          trees.push(tree);
+          obstacleEditor.pendingTree = tree;
+          setSelectedTree(tree);
+        } else {
+          obstacleEditor.pendingTree.setRect(x, y, width, height);
+        }
+        obstacleEditor.geometryDirty = true;
+        updateObstacleControls();
+        evt.preventDefault();
+        return;
+      }
+
+      if (obstacleEditor.mode === 'move' && obstacleEditor.selected && obstacleEditor.handleState) {
+        const tree = obstacleEditor.selected;
+        const { offsetX, offsetY } = obstacleEditor.handleState;
+        tree.setCenter(point.x - offsetX, point.y - offsetY);
+        obstacleEditor.geometryDirty = true;
+        updateObstacleControls();
+        evt.preventDefault();
+        return;
+      }
+
+      if (obstacleEditor.mode === 'resize' && obstacleEditor.selected && obstacleEditor.handleState) {
+        const { original, side } = obstacleEditor.handleState;
+        const cosA = Math.cos(original.angle);
+        const sinA = Math.sin(original.angle);
+        const dx = point.x - original.centerX;
+        const dy = point.y - original.centerY;
+        const localX = dx * cosA + dy * sinA;
+        const localY = -dx * sinA + dy * cosA;
+        let newWidth = original.width;
+        let newHeight = original.height;
+        let centerLocalX = 0;
+        let centerLocalY = 0;
+        if (side === 'right') {
+          const left = -original.width / 2;
+          const right = Math.max(left + 20, localX);
+          newWidth = right - left;
+          centerLocalX = (right + left) / 2;
+        } else if (side === 'left') {
+          const right = original.width / 2;
+          const left = Math.min(right - 20, localX);
+          newWidth = right - left;
+          centerLocalX = (right + left) / 2;
+        } else if (side === 'bottom') {
+          const top = -original.height / 2;
+          const bottom = Math.max(top + 30, localY);
+          newHeight = bottom - top;
+          centerLocalY = (bottom + top) / 2;
+        } else if (side === 'top') {
+          const bottom = original.height / 2;
+          const top = Math.min(bottom - 30, localY);
+          newHeight = bottom - top;
+          centerLocalY = (bottom + top) / 2;
+        }
+
+        const newCenterX = original.centerX + centerLocalX * cosA - centerLocalY * sinA;
+        const newCenterY = original.centerY + centerLocalX * sinA + centerLocalY * cosA;
+        obstacleEditor.selected.setGeometry({
+          centerX: newCenterX,
+          centerY: newCenterY,
+          width: newWidth,
+          height: newHeight
+        });
+        obstacleEditor.geometryDirty = true;
+        updateObstacleControls();
+        evt.preventDefault();
+        return;
+      }
+
+      if (obstacleEditor.mode === 'rotate' && obstacleEditor.selected && obstacleEditor.handleState) {
+        const { origin, offset } = obstacleEditor.handleState;
+        const pointerAngle = Math.atan2(point.y - origin.centerY, point.x - origin.centerX);
+        let nextAngle = pointerAngle + Math.PI / 2 + offset;
+        nextAngle = clamp(nextAngle, -Math.PI / 2, Math.PI / 2);
+        obstacleEditor.selected.setAngle(nextAngle);
+        obstacleEditor.geometryDirty = true;
+        updateObstacleControls();
+        evt.preventDefault();
+        return;
+      }
+
+      updateObstacleHover(point);
+    };
+
+    const handleObstacleEditorPointerUp = () => {
+      if (obstacleEditor.mode === 'creating') {
+        if (!obstacleEditor.pendingTree && obstacleEditor.createStart) {
+          const defaultWidth = 160;
+          const defaultHeight = 220;
+          const x = obstacleEditor.createStart.x - defaultWidth / 2;
+          const y = obstacleEditor.createStart.y - defaultHeight / 2;
+          const tree = Tree.fromRect(x, y, defaultWidth, defaultHeight);
+          trees.push(tree);
+          obstacleEditor.pendingTree = tree;
+          setSelectedTree(tree);
+          obstacleEditor.geometryDirty = true;
+        }
+      }
+
+      if (obstacleEditor.pendingTree) {
+        obstacleEditor.pendingTree.enforceMinimumSize();
+        setSelectedTree(obstacleEditor.pendingTree);
+        obstacleEditor.pendingTree = null;
+      }
+
+      if (obstacleEditor.geometryDirty) {
+        persistCustomTreeLayout();
+      }
+
+      obstacleEditor.geometryDirty = false;
+      obstacleEditor.mode = 'idle';
+      obstacleEditor.handleState = null;
+      obstacleEditor.createStart = null;
+    };
+
     const stopDragging = () => {
       draggingZone = null;
       dragOffsetX = 0;
       dragOffsetY = 0;
+      if (obstacleEditor.enabled) {
+        handleObstacleEditorPointerUp();
+        obstacleEditor.hoverHandle = null;
+      }
     };
 
     const tryStartDrag = evt => {
+      if (obstacleEditor.enabled) {
+        handleObstacleEditorPointerDown(evt);
+        return;
+      }
+
       const point = getCanvasPoint(evt);
       if (!point) return;
 
@@ -866,6 +1140,11 @@
     };
 
     const continueDrag = evt => {
+      if (obstacleEditor.enabled) {
+        handleObstacleEditorPointerMove(evt);
+        return;
+      }
+
       if (!draggingZone) return;
       const point = getCanvasPoint(evt);
       if (!point) return;
@@ -889,7 +1168,7 @@
       for (let d = 6; d <= maxD; d += step) { // @added
         const rx = x + dx * d, ry = y + dy * d; // @added
         if (rx <= 0 || ry <= 0 || rx >= canvas.width || ry >= GROUND_Y) return d / maxD; // @added
-        for (const t of (trees || [])) if (rx > t.x && rx < t.x + t.width && ry > t.y) return d / maxD; // @added
+      for (const t of (trees || [])) if (t.containsPoint(rx, ry)) return d / maxD; // @added
       } // @added
       return 1; // @added
     }
@@ -988,6 +1267,14 @@
     document.getElementById('btnReset').addEventListener('click', () => resetSimulation());
     document.getElementById('btnPause').addEventListener('click', () => { paused = !paused; });
     speedSlider.addEventListener('input', e => applySpeed(e.target.value));
+
+    const treeCountInput = document.getElementById('treeCount');
+    const treeCountDisplay = document.getElementById('uiTreeCount');
+    const setTreeCountDisplay = (value, { custom = false } = {}) => {
+      if (!treeCountDisplay) return;
+      treeCountDisplay.textContent = custom ? `${value} (custom)` : `${value}`;
+    };
+    setTreeCountDisplay(TREE_COUNT);
     
     // Basic settings
     document.getElementById('birdCount').addEventListener('change', e => {
@@ -1046,10 +1333,193 @@
 
     document.getElementById('uiPredSafeZones').textContent = PRED_SAFE_ZONE_COUNT;
     
-    document.getElementById('treeCount').addEventListener('input', e => { // NYTT
-      TREE_COUNT = parseInt(e.target.value);
-      document.getElementById('uiTreeCount').textContent = TREE_COUNT;
+    if (treeCountInput) {
+      treeCountInput.addEventListener('input', e => {
+        TREE_COUNT = parseInt(e.target.value, 10) || 0;
+        setTreeCountDisplay(TREE_COUNT);
+        customTreeLayout = null;
+      });
+    }
+
+    const obstacleWidthInput = document.getElementById('obstacleWidth');
+    const obstacleHeightInput = document.getElementById('obstacleHeight');
+    const obstacleRotationInput = document.getElementById('obstacleRotation');
+    const obstacleWidthLabel = document.getElementById('uiObstacleWidth');
+    const obstacleHeightLabel = document.getElementById('uiObstacleHeight');
+    const obstacleRotationLabel = document.getElementById('uiObstacleRotation');
+    const obstacleToggle = document.getElementById('toggleObstacleEditor');
+    const obstacleAddBtn = document.getElementById('btnAddObstacle');
+    const obstacleDeleteBtn = document.getElementById('btnDeleteObstacle');
+
+    const pixels = value => `${Math.round(value)}px`;
+    const degrees = value => `${Math.round(value)}°`;
+    const radToDeg = radians => (radians * 180) / Math.PI;
+    const degToRad = deg => (deg * Math.PI) / 180;
+
+    const persistCustomTreeLayout = () => {
+      customTreeLayout = trees.map(tree => tree.serialize());
+      setTreeCountDisplay(trees.length, { custom: true });
+    };
+
+    const updateObstacleControls = () => {
+      const tree = obstacleEditor.selected;
+      const hasTree = !!tree;
+
+      if (obstacleWidthInput) {
+        obstacleWidthInput.disabled = !hasTree;
+        if (hasTree) obstacleWidthInput.value = Math.round(tree.width);
+      }
+      if (obstacleHeightInput) {
+        obstacleHeightInput.disabled = !hasTree;
+        if (hasTree) obstacleHeightInput.value = Math.round(tree.height);
+      }
+      if (obstacleRotationInput) {
+        obstacleRotationInput.disabled = !hasTree;
+        if (hasTree) obstacleRotationInput.value = Math.round(radToDeg(tree.angle));
+      }
+      if (obstacleWidthLabel) obstacleWidthLabel.textContent = hasTree ? pixels(tree.width) : '--';
+      if (obstacleHeightLabel) obstacleHeightLabel.textContent = hasTree ? pixels(tree.height) : '--';
+      if (obstacleRotationLabel) obstacleRotationLabel.textContent = hasTree ? degrees(radToDeg(tree.angle)) : '--';
+      if (obstacleDeleteBtn) obstacleDeleteBtn.disabled = !hasTree;
+    };
+
+    const setSelectedTree = tree => {
+      obstacleEditor.selected = tree || null;
+      obstacleEditor.hoverHandle = null;
+      updateObstacleControls();
+    };
+
+    const ensureObstacleEditorEnabled = () => {
+      if (obstacleEditor.enabled) return;
+      obstacleEditor.enabled = true;
+      if (obstacleToggle) obstacleToggle.checked = true;
+      paused = true;
+      persistCustomTreeLayout();
+    };
+
+    const cancelObstaclePlacement = () => {
+      if (obstacleEditor.pendingTree) {
+        const idx = trees.indexOf(obstacleEditor.pendingTree);
+        if (idx >= 0) trees.splice(idx, 1);
+      }
+      obstacleEditor.pendingTree = null;
+      obstacleEditor.createStart = null;
+      obstacleEditor.mode = 'idle';
+      obstacleEditor.handleState = null;
+      obstacleEditor.geometryDirty = false;
+      updateObstacleControls();
+    };
+
+    const deleteSelectedTree = () => {
+      if (!obstacleEditor.selected) return;
+      const index = trees.indexOf(obstacleEditor.selected);
+      if (index >= 0) {
+        trees.splice(index, 1);
+        obstacleEditor.geometryDirty = true;
+        persistCustomTreeLayout();
+      }
+      setSelectedTree(null);
+    };
+
+    const applyWidthFromControl = value => {
+      if (!obstacleEditor.selected) return;
+      const width = clamp(value, 20, 600);
+      obstacleEditor.selected.setSize(width, obstacleEditor.selected.height);
+      obstacleEditor.geometryDirty = true;
+      persistCustomTreeLayout();
+      updateObstacleControls();
+    };
+
+    const applyHeightFromControl = value => {
+      if (!obstacleEditor.selected) return;
+      const height = clamp(value, 30, 650);
+      obstacleEditor.selected.setSize(obstacleEditor.selected.width, height);
+      obstacleEditor.geometryDirty = true;
+      persistCustomTreeLayout();
+      updateObstacleControls();
+    };
+
+    const applyRotationFromControl = value => {
+      if (!obstacleEditor.selected) return;
+      const clamped = clamp(value, -90, 90);
+      obstacleEditor.selected.setAngle(degToRad(clamped));
+      obstacleEditor.geometryDirty = true;
+      persistCustomTreeLayout();
+      updateObstacleControls();
+    };
+
+    if (obstacleToggle) {
+      obstacleToggle.addEventListener('change', e => {
+        obstacleEditor.enabled = e.target.checked;
+        if (obstacleEditor.enabled) {
+          paused = true;
+          persistCustomTreeLayout();
+        } else {
+          cancelObstaclePlacement();
+        }
+      });
+    }
+
+    if (obstacleAddBtn) {
+      obstacleAddBtn.addEventListener('click', () => {
+        ensureObstacleEditorEnabled();
+        obstacleEditor.mode = 'await-create';
+        obstacleEditor.pendingTree = null;
+        obstacleEditor.createStart = null;
+        obstacleEditor.handleState = null;
+        obstacleEditor.geometryDirty = false;
+      });
+    }
+
+    if (obstacleDeleteBtn) {
+      obstacleDeleteBtn.addEventListener('click', () => deleteSelectedTree());
+    }
+
+    if (obstacleWidthInput) {
+      obstacleWidthInput.addEventListener('input', e => {
+        if (!obstacleEditor.selected) return;
+        const value = parseInt(e.target.value, 10);
+        if (isNaN(value)) return;
+        applyWidthFromControl(value);
+      });
+    }
+
+    if (obstacleHeightInput) {
+      obstacleHeightInput.addEventListener('input', e => {
+        if (!obstacleEditor.selected) return;
+        const value = parseInt(e.target.value, 10);
+        if (isNaN(value)) return;
+        applyHeightFromControl(value);
+      });
+    }
+
+    if (obstacleRotationInput) {
+      obstacleRotationInput.addEventListener('input', e => {
+        if (!obstacleEditor.selected) return;
+        const value = parseFloat(e.target.value);
+        if (isNaN(value)) return;
+        applyRotationFromControl(value);
+      });
+    }
+
+    window.addEventListener('keydown', e => {
+      if (!obstacleEditor.enabled) return;
+      const activeTag = document.activeElement && document.activeElement.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelectedTree();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (obstacleEditor.mode === 'creating' || obstacleEditor.mode === 'await-create') {
+          cancelObstaclePlacement();
+        }
+        setSelectedTree(null);
+      }
     });
+
+    updateObstacleControls();
 
     // NYTT: Nest settings
     document.getElementById('twigCount').addEventListener('input', e => {
@@ -1508,41 +1978,216 @@
     
     // NEW: Tree class
     class Tree {
-      constructor(x, width, height) {
+      constructor(x, width, height, options = {}) {
+        this.width = Math.max(20, width);
+        this.height = Math.max(30, height);
         this.x = x;
-        this.width = width;
-        this.height = height;
-        this.y = GROUND_Y - this.height;
-        this.canopyRadius = this.width * 2.5;
-        this.canopyCenterY = this.y - this.canopyRadius * 0.25;
+        this.y = options.y != null ? options.y : GROUND_Y - this.height;
+        this.angle = options.angle || 0;
         this.trunkColor = '#5D4037';
         this.canopyRingColor = `hsl(120, 55%, ${32 + Math.random() * 6}%)`;
         this.canopyCoreColor = `hsl(90, 50%, ${60 + Math.random() * 8}%)`;
         this.canopyOutlineColor = `hsl(120, 45%, ${24 + Math.random() * 6}%)`;
-        this.ringWidth = this.canopyRadius * 0.55;
+        this.updateGeometry();
       }
-      draw() {
-        const centerX = this.x + this.width / 2;
+      updateGeometry() {
+        this.halfWidth = this.width / 2;
+        this.halfHeight = this.height / 2;
+        this.centerX = this.x + this.halfWidth;
+        this.centerY = this.y + this.halfHeight;
+        this.canopyRadius = Math.max(this.width, this.height) * 0.6;
+        this.canopyOffsetY = -this.halfHeight - this.canopyRadius * 0.35;
+        this.ringWidth = this.canopyRadius * 0.45;
+      }
+      setRect(x, y, width, height) {
+        this.width = Math.max(20, width);
+        this.height = Math.max(30, height);
+        this.x = x;
+        this.y = y;
+        this.updateGeometry();
+      }
+      setGeometry({ centerX = this.centerX, centerY = this.centerY, width = this.width, height = this.height, angle = this.angle }) {
+        this.width = Math.max(20, width);
+        this.height = Math.max(30, height);
+        this.angle = angle;
+        this.x = centerX - this.width / 2;
+        this.y = centerY - this.height / 2;
+        this.updateGeometry();
+      }
+      setCenter(cx, cy) {
+        this.setGeometry({ centerX: cx, centerY: cy });
+      }
+      setSize(width, height) {
+        this.setGeometry({ centerX: this.centerX, centerY: this.centerY, width, height });
+      }
+      setAngle(angle) {
+        this.angle = angle;
+      }
+      enforceMinimumSize() {
+        const minWidth = 20;
+        const minHeight = 30;
+        const width = Math.max(this.width, minWidth);
+        const height = Math.max(this.height, minHeight);
+        this.setGeometry({ centerX: this.centerX, centerY: this.centerY, width, height, angle: this.angle });
+      }
+      localToWorld(lx, ly) {
+        const cosA = Math.cos(this.angle);
+        const sinA = Math.sin(this.angle);
+        return {
+          x: this.centerX + lx * cosA - ly * sinA,
+          y: this.centerY + lx * sinA + ly * cosA
+        };
+      }
+      worldToLocal(px, py) {
+        const dx = px - this.centerX;
+        const dy = py - this.centerY;
+        const cosA = Math.cos(this.angle);
+        const sinA = Math.sin(this.angle);
+        return {
+          x: dx * cosA + dy * sinA,
+          y: -dx * sinA + dy * cosA
+        };
+      }
+      containsPoint(px, py) {
+        const local = this.worldToLocal(px, py);
+        return Math.abs(local.x) <= this.halfWidth && Math.abs(local.y) <= this.halfHeight;
+      }
+      getHandles() {
+        const rotateOffset = Math.max(40, this.height * 0.35);
+        const handles = [
+          { type: 'resize', axis: 'left', local: { x: -this.halfWidth, y: 0 } },
+          { type: 'resize', axis: 'right', local: { x: this.halfWidth, y: 0 } },
+          { type: 'resize', axis: 'top', local: { x: 0, y: -this.halfHeight } },
+          { type: 'resize', axis: 'bottom', local: { x: 0, y: this.halfHeight } },
+          { type: 'rotate', axis: 'rotate', local: { x: 0, y: -this.halfHeight - rotateOffset } }
+        ];
+        return handles.map(handle => ({
+          ...handle,
+          world: this.localToWorld(handle.local.x, handle.local.y)
+        }));
+      }
+      getHandleAt(px, py) {
+        const handles = this.getHandles();
+        for (const handle of handles) {
+          const dx = px - handle.world.x;
+          const dy = py - handle.world.y;
+          const limit = handle.type === 'rotate' ? 30 : 22;
+          if (Math.hypot(dx, dy) <= limit) {
+            return handle;
+          }
+        }
+        return null;
+      }
+      resolveCircleCollision(cx, cy, radius) {
+        const local = this.worldToLocal(cx, cy);
+        let normalLocal = null;
+        let overlap = 0;
+
+        if (Math.abs(local.x) <= this.halfWidth && Math.abs(local.y) <= this.halfHeight) {
+          const distX = this.halfWidth - Math.abs(local.x);
+          const distY = this.halfHeight - Math.abs(local.y);
+          if (distX < distY) {
+            normalLocal = { x: local.x >= 0 ? 1 : -1, y: 0 };
+            overlap = distX + radius;
+          } else {
+            normalLocal = { x: 0, y: local.y >= 0 ? 1 : -1 };
+            overlap = distY + radius;
+          }
+        } else {
+          const clampedX = clamp(local.x, -this.halfWidth, this.halfWidth);
+          const clampedY = clamp(local.y, -this.halfHeight, this.halfHeight);
+          const distX = local.x - clampedX;
+          const distY = local.y - clampedY;
+          const distSq = distX * distX + distY * distY;
+          if (distSq < radius * radius) {
+            const dist = Math.sqrt(distSq) || 0.0001;
+            normalLocal = { x: distX / dist, y: distY / dist };
+            overlap = radius - dist;
+          }
+        }
+
+        if (!normalLocal || overlap <= 0) return null;
+
+        const cosA = Math.cos(this.angle);
+        const sinA = Math.sin(this.angle);
+        const normalX = normalLocal.x * cosA - normalLocal.y * sinA;
+        const normalY = normalLocal.x * sinA + normalLocal.y * cosA;
+        return { overlap, normalX, normalY };
+      }
+      draw({ selected = false, editorActive = false, hoverHandle = null } = {}) {
+        ctx.save();
+        ctx.translate(this.centerX, this.centerY);
+        ctx.rotate(this.angle);
 
         ctx.fillStyle = this.trunkColor;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillRect(-this.halfWidth, -this.halfHeight, this.width, this.height);
 
+        ctx.save();
+        ctx.translate(0, this.canopyOffsetY);
         ctx.strokeStyle = this.canopyRingColor;
         ctx.lineWidth = this.ringWidth;
         ctx.beginPath();
-        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, this.canopyRadius, this.canopyRadius * 0.7, 0, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.fillStyle = this.canopyCoreColor;
         ctx.beginPath();
-        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius * 0.35, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, this.canopyRadius * 0.55, this.canopyRadius * 0.45, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = this.canopyOutlineColor;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, this.canopyRadius, this.canopyRadius * 0.7, 0, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
+
+        ctx.restore();
+
+        if (editorActive) {
+          this.drawEditorOverlay({ selected, hoverHandle });
+        }
+      }
+      drawEditorOverlay({ selected, hoverHandle } = {}) {
+        ctx.save();
+        ctx.translate(this.centerX, this.centerY);
+        ctx.rotate(this.angle);
+        ctx.lineWidth = selected ? 3 : 2;
+        ctx.strokeStyle = selected ? 'rgba(13,110,253,0.95)' : 'rgba(13,110,253,0.6)';
+        ctx.strokeRect(-this.halfWidth, -this.halfHeight, this.width, this.height);
+
+        const handles = this.getHandles();
+        for (const handle of handles) {
+          const isRotate = handle.type === 'rotate';
+          const isHover = hoverHandle && hoverHandle.type === handle.type && hoverHandle.axis === handle.axis;
+          if (isRotate) {
+            ctx.strokeStyle = 'rgba(14,165,233,0.9)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -this.halfHeight);
+            ctx.lineTo(handle.local.x, handle.local.y + 10);
+            ctx.stroke();
+          }
+          ctx.fillStyle = isHover ? '#0d6efd' : isRotate ? '#38bdf8' : '#2563eb';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          const size = isRotate ? 8 : 6;
+          ctx.arc(handle.local.x, handle.local.y, size + (isHover ? 2 : 0), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+      serialize() {
+        return { x: this.x, y: this.y, width: this.width, height: this.height, angle: this.angle };
+      }
+      static fromRect(x, y, width, height, angle = 0) {
+        return new Tree(x, width, height, { y, angle });
+      }
+      static fromData(data) {
+        return new Tree(data.x, data.width, data.height, { y: data.y, angle: data.angle || 0 });
       }
     }
 
@@ -2447,25 +3092,16 @@
         
         // NEW: Tree collision
         for (const tree of trees) {
-          const birdRadiusX = 8;
-          const birdRadiusY = 6;
-          if (this.x + birdRadiusX > tree.x &&
-              this.x - birdRadiusX < tree.x + tree.width &&
-              this.y + birdRadiusY > tree.y) {
-            
-            // Colliding. Check if we hit the top
-            if (this.y - birdRadiusY < tree.y && this.vy > 0) {
-              this.y = tree.y - birdRadiusY;
-              this.vy = -Math.abs(this.vy) * 0.3; // Bounce off the top
-            } else { // Hit the side
-              if (this.vx > 0) { // Moving right
-                this.x = tree.x - birdRadiusX;
-                this.vx = -Math.abs(this.vx) * 0.5;
-              } else { // Moving left
-                this.x = tree.x + tree.width + birdRadiusX;
-                this.vx = Math.abs(this.vx) * 0.5;
-              }
-            }
+          const birdRadius = 8;
+          const collision = tree.resolveCircleCollision(this.x, this.y, birdRadius);
+          if (!collision) continue;
+          this.x += collision.normalX * collision.overlap;
+          this.y += collision.normalY * collision.overlap;
+          const velDot = this.vx * collision.normalX + this.vy * collision.normalY;
+          if (velDot < 0) {
+            const bounce = 0.4;
+            this.vx -= (1 + bounce) * velDot * collision.normalX;
+            this.vy -= (1 + bounce) * velDot * collision.normalY;
           }
         }
 
@@ -3036,28 +3672,18 @@
 
         // NEW: Tree collision for predator
         for (const tree of trees) {
-          const predRadiusX = 16;
-          const predRadiusY = 10;
-          if (this.x + predRadiusX > tree.x &&
-              this.x - predRadiusX < tree.x + tree.width &&
-              this.y + predRadiusY > tree.y) {
-            
-            if (this.y - predRadiusY < tree.y && this.vy > 0) {
-              this.y = tree.y - predRadiusY;
-              this.vy = -Math.abs(this.vy) * 0.3;
-              this.fitness -= 8;
-            } else {
-              if (this.vx > 0) {
-                this.x = tree.x - predRadiusX;
-                this.vx = -Math.abs(this.vx) * 0.5;
-                this.fitness -= 8;
-              } else {
-                this.x = tree.x + tree.width + predRadiusX;
-                this.vx = Math.abs(this.vx) * 0.5;
-                this.fitness -= 8;
-              }
-            }
+          const predRadius = 16;
+          const collision = tree.resolveCircleCollision(this.x, this.y, predRadius);
+          if (!collision) continue;
+          this.x += collision.normalX * collision.overlap;
+          this.y += collision.normalY * collision.overlap;
+          const velDot = this.vx * collision.normalX + this.vy * collision.normalY;
+          if (velDot < 0) {
+            const bounce = 0.45;
+            this.vx -= (1 + bounce) * velDot * collision.normalX;
+            this.vy -= (1 + bounce) * velDot * collision.normalY;
           }
+          this.fitness -= 8;
         }
 
         for (const f of foodParticles) {
@@ -3421,13 +4047,21 @@
       buildPredatorNests(PRED_SAFE_ZONE_COUNT);
 
       // NEW: Init Trees
-      trees = [];
-      for (let i = 0; i < TREE_COUNT; i++) {
-        const treeWidth = 25 + Math.random() * 20;
-        const treeHeight = 150 + Math.random() * 300;
-        // Undvik kanter och fiendebon
-        const x = 200 + Math.random() * (canvas.width - 600); 
-        trees.push(new Tree(x, treeWidth, treeHeight));
+      if (customTreeLayout && customTreeLayout.length) {
+        trees = customTreeLayout.map(Tree.fromData);
+        setTreeCountDisplay(trees.length, { custom: true });
+      } else {
+        trees = [];
+        for (let i = 0; i < TREE_COUNT; i++) {
+          const treeWidth = 25 + Math.random() * 20;
+          const treeHeight = 150 + Math.random() * 300;
+          const x = 200 + Math.random() * (canvas.width - 600);
+          trees.push(new Tree(x, treeWidth, treeHeight));
+        }
+        setTreeCountDisplay(TREE_COUNT);
+      }
+      if (obstacleEditor.selected && !trees.includes(obstacleEditor.selected)) {
+        setSelectedTree(null);
       }
       
       // NYTT: Init Bo & Kvistar
@@ -3815,7 +4449,11 @@
       
       if (birdNest) birdNest.draw(); // NYTT
       if (enemyNest) enemyNest.draw();
-      trees.forEach(t => t.draw()); // NYTT
+      trees.forEach(t => t.draw({
+        selected: obstacleEditor.selected === t,
+        editorActive: obstacleEditor.enabled,
+        hoverHandle: obstacleEditor.hoverHandle
+      }));
       
       // Draw twigs that are not carried
       twigPile.forEach(t => t.draw()); // NYTT
