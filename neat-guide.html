@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Om NEAT-simuleringen</title>
+  <title>About the NEAT Simulation</title>
   <style>
     :root {
       --ink:#f1f5ff;
@@ -86,200 +86,187 @@
 </head>
 <body>
   <header>
-    <a class="button-link" href="index.html">⬅️ Tillbaka till simuleringen</a>
-    <h1>Allt om NEAT-simuleringen</h1>
+    <a class="button-link" href="index.html">⬅️ Back to the Simulation</a>
+    <h1>All About the NEAT Simulation</h1>
     <p>
-      Här samlas hela bakgrundsbeskrivningen för projektet. Du får en snabb överblick över hur flocksimuleringen fungerar,
-      hur NEAT utvecklar nya beteenden, vilka parametrar som styr svårighetsgraden samt hur poängen räknas. Sidan är tänkt
-      som ett komplett "About"-dokument som går igenom allt steg för steg på svenska.
+      This page collects the full background description for the project. You get a quick overview of how the flock simulation works,
+      how NEAT develops new behaviours, which parameters control the difficulty, and how the scoring is calculated. Think of it as a complete
+      "About" document that walks through everything step by step.
     </p>
     <nav class="toc">
-      <a href="#overview">Översikt</a>
-      <a href="#loop">Evolutionens cykel</a>
-      <a href="#brains">Fåglarnas hjärnor</a>
-      <a href="#predators">Fiender och balans</a>
-      <a href="#scoring">Poäng & statistik</a>
-      <a href="#parameters">Parameteruppslagsverk</a>
+      <a href="#overview">Overview</a>
+      <a href="#loop">Evolution Cycle</a>
+      <a href="#brains">Bird Brains</a>
+      <a href="#predators">Predators and Balance</a>
+      <a href="#scoring">Scoring & Statistics</a>
+      <a href="#parameters">Parameter Reference</a>
     </nav>
   </header>
 
   <main>
     <section id="overview">
-      <h2>Översikt över projektet</h2>
+      <h2>Project Overview</h2>
       <p>
-        Simuleringen visar ett litet ekosystem där en flock småfåglar måste samla kvistar, hålla sig mätta och undvika
-        fiender. Allt styrs av NeuroEvolution of Augmenting Topologies (NEAT) som successivt låter artificiella neurala
-        nätverk förändras. Resultatet är att fåglarna kan lära sig samarbete, specialisera roller och upptäcka oväntade
-        överlevnadsstrategier helt utan manuell reglerstyrning.
+        The simulation shows a small ecosystem where a flock of songbirds must gather twigs, stay nourished, and avoid enemies.
+        Everything is driven by NeuroEvolution of Augmenting Topologies (NEAT), which gradually allows artificial neural networks to change.
+        As a result, the birds can learn to cooperate, specialise roles, and discover unexpected survival strategies without manual rule tuning.
       </p>
       <p>
-        Målet är att bygga upp ett bo samtidigt som flocken överlever så länge som möjligt. Simulatorn räknar upp ett antal
-        indikatorer i kontrollpanelen på startsidan: generation, överlevnadstid, antal levande fåglar och olika rekord. På
-        den här sidan hittar du bakgrundsinformationen som förklarar hur siffrorna hänger ihop och vad du kan styra.
+        The goal is to build a nest while the flock survives for as long as possible. The simulator tracks several indicators in the control panel on the main page:
+        generation, survival time, number of birds alive, and various records. This page explains how those numbers relate to each other and what you can control.
       </p>
       <div class="pill-list">
-        <span class="pill">Dynamiskt växande neurala nät</span>
-        <span class="pill">Fitness-styrt urval</span>
-        <span class="pill">Mutationsdiversitet</span>
-        <span class="pill">Artskydd för nya beteenden</span>
+        <span class="pill">Dynamically growing neural networks</span>
+        <span class="pill">Fitness-driven selection</span>
+        <span class="pill">Mutation diversity</span>
+        <span class="pill">Species protection for new behaviours</span>
       </div>
     </section>
 
     <section id="loop">
-      <h2>Evolutionens cykel</h2>
+      <h2>Evolution Cycle</h2>
       <p>
-        NEAT arbetar i tydliga generationer. Varje varv genom simuleringen består av fyra huvuddelar som repeteras så länge
-        du låter programmet vara igång:
+        NEAT operates in clear generations. Each run through the simulation consists of four main phases that repeat for as long as you keep the program running:
       </p>
       <ul>
-        <li><strong>Initiering:</strong> En ny flock genereras med slumpmässigt viktade hjärnor. Om rovdjur är aktiverade får de en egen startpopulation.</li>
-        <li><strong>Simulering:</strong> Bildrutan tickar framåt, fåglar letar mat, varnar varandra, gömmer sig och bär kvistar till boet. Fiender patrullerar kartan och testar flockens försvar.</li>
-        <li><strong>Fitness-spårning:</strong> Varje individ samlar fitness-poäng för överlevnadstid, matintag, lyckade flykter och byggframsteg. Dåliga val som stillastående gömställen kan ge avdrag.</li>
-        <li><strong>Generationsskifte:</strong> När alla fåglar är borta väljs de bästa hjärnorna ut. Eliten kopieras rakt av, en föräldrapool korsar gener och mutationer skapar nya kopplingar eller ändrar vikter.</li>
+        <li><strong>Initialisation:</strong> A new flock is generated with randomly weighted brains. If predators are enabled they receive their own starting population.</li>
+        <li><strong>Simulation:</strong> Frames tick forward, birds search for food, warn each other, hide, and carry twigs to the nest. Enemies patrol the map and test the flock's defences.</li>
+        <li><strong>Fitness tracking:</strong> Every individual collects fitness points for survival time, food intake, successful escapes, and building progress. Poor choices, such as idling in a hideout, can subtract points.</li>
+        <li><strong>Generation shift:</strong> When all birds are gone, the best brains are selected. The elite is copied as-is, a parent pool crosses genes, and mutations create new connections or adjust weights.</li>
       </ul>
       <p>
-        Om du aktiverar progressiv evolution för rovdjuren upprepar de samma flöde, vilket gör att jägarna hänger med i
-        svårighetsgrad när fåglarna blir smartare. Det skapar en katt-och-råtta-dynamik där båda sidor utvecklas samtidigt.
+        If you enable progressive evolution for predators they repeat the same flow, letting the hunters keep up as the birds become smarter. That creates a cat-and-mouse dynamic where both sides evolve together.
       </p>
     </section>
 
     <section id="brains">
-      <h2>Fåglarnas hjärnor</h2>
+      <h2>Bird Brains</h2>
       <p>
-        Varje liten fågel styrs av ett neuralt nät som tar emot 33 kontinuerliga signaler. Inmatningarna speglar både den
-        egna statusen och allt som händer i närmiljön:
+        Every small bird is controlled by a neural network that receives 33 continuous signals. The inputs reflect both its own status and everything happening nearby:
       </p>
       <ul>
-        <li><strong>Energi och uthållighet:</strong> Återstående reserver, förbrukningstakt och om fågeln står under larm påverkar risktagandet.</li>
-        <li><strong>Rumsuppfattning:</strong> Avstånd och vinklar till mat, fiender, gömställen, träd och boet bygger upp en mental karta.</li>
-        <li><strong>Sociala signaler:</strong> Räknare för närliggande flockmedlemmar och inkommande varningar styr om fågeln flockar eller sprider sig.</li>
-        <li><strong>Boets status:</strong> Hur många kvistar som återstår och hur långt det är till boet styr bygglusten.</li>
+        <li><strong>Energy and stamina:</strong> Remaining reserves, rate of consumption, and whether the bird is under an alarm influence its risk taking.</li>
+        <li><strong>Spatial awareness:</strong> Distances and angles to food, enemies, hideouts, trees, and the nest build a mental map.</li>
+        <li><strong>Social signals:</strong> Counters for nearby flock members and incoming warnings decide whether the bird flocks or spreads out.</li>
+        <li><strong>Nest status:</strong> How many twigs remain and the distance to the nest influence building motivation.</li>
       </ul>
       <p>
-        Hjärnan lämnar fyra utgångsvärden som tolkas direkt av simuleringen:
+        The brain returns four output values that the simulation interprets directly:
       </p>
       <ul>
-        <li><strong>Horisontell och vertikal kraft</strong> bestämmer flygriktningen.</li>
-        <li><strong>Gömma sig-signal</strong> aktiveras när värdet överstiger 0,3 och fågeln har ett gömställe i närheten.</li>
-        <li><strong>Kvistfokus</strong> aktiveras också vid 0,3 och uppmuntrar kvistplockning och leverans till boet.</li>
+        <li><strong>Horizontal and vertical thrust</strong> determine the flight direction.</li>
+        <li><strong>Hide signal</strong> activates when the value exceeds 0.3 and the bird has a hideout nearby.</li>
+        <li><strong>Twig focus</strong> also activates at 0.3 and encourages twig collection and delivery to the nest.</li>
       </ul>
       <p>
-        Genom mutationer kan NEAT lägga till nya neuroner eller justera vikter. Fler dolda neuroner ger mer uttrycksfulla
-        beteenden, medan starkare mutationer snabbar upp förändringstakten men kan göra att flocken tappar tidigare framsteg.
+        Through mutations NEAT can add new neurons or adjust weights. More hidden neurons create richer behaviours, while stronger mutations speed up change but may cause the flock to lose previous progress.
       </p>
     </section>
 
     <section id="predators">
-      <h2>Fiender och balans</h2>
+      <h2>Predators and Balance</h2>
       <p>
-        Rovfåglarna fungerar som ett dynamiskt hot. Du kan justera hur många som patrullerar, hur fort de flyger, och om de
-        utvecklas i takt med småfåglarna. När packjakt är aktiverat kan flera rovdjur dela information och omringa målet.
+        Birds of prey act as a dynamic threat. You can tweak how many patrol, how fast they fly, and whether they evolve alongside the songbirds. When pack hunting is enabled several predators can share information and encircle their target.
       </p>
       <p>
-        Kartan innehåller också träd som fungerar som hinder och gömställen med begränsat utrymme. Att gömma sig för länge
-        ger fitnessavdrag, så flocken tvingas alltid väga risk mot belöning. Energisystemet för både fåglar och rovdjur gör
-        dessutom att ingen kan sprinta obegränsat – alla behöver mat respektive byten för att orka jaga vidare.
+        The map also contains trees that work as obstacles and hideouts with limited space. Hiding for too long gives a fitness penalty, forcing the flock to weigh risk against reward. The energy systems for both birds and predators mean no one can sprint forever—everyone needs food or prey to keep chasing.
       </p>
     </section>
 
     <section id="scoring">
-      <h2>Poäng & statistik</h2>
+      <h2>Scoring & Statistics</h2>
       <p>
-        På huvudsidan syns två paneler: den aktuella statusen och rekord från hela sessionen. Följande värden uppdateras i
-        realtid:
+        The main page shows two panels: the current status and records from the entire session. The following values update in real time:
       </p>
       <ul>
-        <li><strong>Generation:</strong> Vilken omgång flocken befinner sig i.</li>
-        <li><strong>Överlevnadstid:</strong> Hur länge den nuvarande generationen har klarat sig.</li>
-        <li><strong>Fåglar vid liv:</strong> En snabb indikator på hur hårt trycket är.</li>
-        <li><strong>Dödsfall denna generation:</strong> Bra att jämföra mot rovdjursvinster.</li>
-        <li><strong>Fiendevinster:</strong> Antal lyckade attacker som rovdjuren genomfört.</li>
+        <li><strong>Generation:</strong> The round the flock is currently in.</li>
+        <li><strong>Survival time:</strong> How long the current generation has lasted.</li>
+        <li><strong>Birds alive:</strong> A quick indicator of how much pressure they are under.</li>
+        <li><strong>Deaths this generation:</strong> Useful for comparing against predator victories.</li>
+        <li><strong>Enemy wins:</strong> The number of successful attacks completed by predators.</li>
       </ul>
       <p>
-        Rekordsektionen lagrar bland annat högsta uppnådda fitness, längsta överlevnad, största byggda bo, största fiendebo
-        (om rovdjuren får bygga), samt hur många fåglar som fångats totalt. Dessa värden hjälper dig se vilka strategier som
-        fungerar bäst över tid och hur förändringar i parametrarna påverkar utvecklingen.
+        The record section stores the highest fitness achieved, longest survival, largest built nest, largest enemy nest (if predators can build), and how many birds have been caught in total. These values help you spot which strategies work best over time and how parameter changes influence progress.
       </p>
     </section>
 
     <section id="parameters">
-      <h2>Parameteruppslagsverk</h2>
+      <h2>Parameter Reference</h2>
       <p>
-        Kontrollpanelen i simuleringen låter dig finjustera varenda del av ekosystemet. Nedan listas alla reglage och vad de
-        påverkar. Ändringar syns direkt i HUD:en på startsidan.
+        The control panel in the simulation lets you fine-tune every part of the ecosystem. Below is a list of all sliders and what they affect. Changes appear instantly in the HUD on the main page.
       </p>
 
       <div class="parameter-group">
-        <h3>Grundinställningar</h3>
+        <h3>Core Settings</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>🐦 Antal småfåglar</strong><span>Bestämmer populationen per generation. Större flockar ger mer variation men gör evolutionen långsammare.</span></div>
-          <div class="parameter-card"><strong>🦅 Rovfåglar</strong><span>Hur många fiender som aktivt jagar flocken. Fler rovdjur ökar pressen och belönar smidiga strategier.</span></div>
-          <div class="parameter-card"><strong>🍎 Matfrekvens</strong><span>Hur ofta ny mat dyker upp. Brist på mat tvingar fram aggressiv letning och energieffektiv flygning.</span></div>
-          <div class="parameter-card"><strong>🌳 Antal gömställen</strong><span>Hur många säkra zoner kartan innehåller. De ger en kort andningspaus men rymmer bara ett begränsat antal fåglar.</span></div>
-          <div class="parameter-card"><strong>🏠 Kapacitet per gömställe</strong><span>Maximalt antal individer som får plats på samma gång.</span></div>
-          <div class="parameter-card"><strong>🌲 Träd / hinder</strong><span>Lägger till objekt som både fåglar och rovdjur måste navigera runt.</span></div>
+          <div class="parameter-card"><strong>🐦 Number of Small Birds</strong><span>Determines the population per generation. Larger flocks create more variety but slow evolution.</span></div>
+          <div class="parameter-card"><strong>🦅 Predators</strong><span>How many enemies actively hunt the flock. More predators increase pressure and reward agile strategies.</span></div>
+          <div class="parameter-card"><strong>🍎 Food Frequency</strong><span>How often new food appears. Scarcity forces aggressive searching and energy-efficient flight.</span></div>
+          <div class="parameter-card"><strong>🌳 Safe Zone Count</strong><span>How many safe zones the map contains. They provide short breathers but only fit a limited number of birds.</span></div>
+          <div class="parameter-card"><strong>🏠 Capacity per Safe Zone</strong><span>The maximum number of individuals that can hide at the same time.</span></div>
+          <div class="parameter-card"><strong>🌲 Trees / Obstacles</strong><span>Adds objects that both birds and predators must navigate around.</span></div>
         </div>
       </div>
 
       <div class="parameter-group">
-        <h3>Bobygge</h3>
+        <h3>Nest Building</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>🪵 Kvistar i högen</strong><span>Hur många kvistar som genereras i centrala högen. Varje kvist kan bäras en gång.</span></div>
-          <div class="parameter-card"><strong>🏆 Fitnessbonus per kvist</strong><span>Belöning till den fågel som levererar en kvist till boet. Högre värden uppmuntrar byggfokus.</span></div>
+          <div class="parameter-card"><strong>🪵 Twigs in the Pile</strong><span>How many twigs spawn in the central pile. Each twig can be carried once.</span></div>
+          <div class="parameter-card"><strong>🏆 Fitness Bonus per Twig</strong><span>The reward for the bird that delivers a twig to the nest. Higher values encourage building focus.</span></div>
         </div>
       </div>
 
       <div class="parameter-group">
-        <h3>Gömställen</h3>
+        <h3>Hideouts</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>⏱️ Maximal gömtid</strong><span>Så många bildrutor en fågel får ligga kvar innan den måste flyga vidare.</span></div>
-          <div class="parameter-card"><strong>⏳ Nedkylning efter gömning</strong><span>Antal bildrutor som måste passera innan samma fågel får gömma sig igen.</span></div>
-          <div class="parameter-card"><strong>😰 Fitnessavdrag vid gömställe</strong><span>Poäng som dras av varje tick när fågeln sitter still i skydd.</span></div>
+          <div class="parameter-card"><strong>⏱️ Maximum Hide Time</strong><span>The number of frames a bird may stay put before it has to fly again.</span></div>
+          <div class="parameter-card"><strong>⏳ Cooldown after Hiding</strong><span>The number of frames that must pass before the same bird can hide again.</span></div>
+          <div class="parameter-card"><strong>😰 Fitness Penalty while Hiding</strong><span>Points deducted every tick when a bird remains sheltered.</span></div>
         </div>
       </div>
 
       <div class="parameter-group">
-        <h3>Småfåglarnas evolution</h3>
+        <h3>Small Bird Evolution</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>Elite %</strong><span>Andel toppresterande fåglar som förs vidare oförändrade.</span></div>
-          <div class="parameter-card"><strong>Föräldrapool %</strong><span>Hur stor del av de bästa individerna som får bidra med gener.</span></div>
-          <div class="parameter-card"><strong>Mutationsfrekvens %</strong><span>Sannolikhet att en enskild koppling muterar under reproduktion.</span></div>
-          <div class="parameter-card"><strong>Mutationsstyrka</strong><span>Hur kraftiga förändringarna är varje gång en mutation sker.</span></div>
-          <div class="parameter-card"><strong>🧠 Dolda neuroner</strong><span>Storleken på det dolda lagret i fågelhjärnorna. Fler neuroner gör beteenden mer uttrycksfulla.</span></div>
+          <div class="parameter-card"><strong>Elite %</strong><span>The share of top-performing birds that carry over unchanged.</span></div>
+          <div class="parameter-card"><strong>Parent Pool %</strong><span>The portion of the best individuals allowed to contribute genes.</span></div>
+          <div class="parameter-card"><strong>Mutation Rate %</strong><span>The chance that a given connection mutates during reproduction.</span></div>
+          <div class="parameter-card"><strong>Mutation Power</strong><span>How strong each mutation is when it occurs.</span></div>
+          <div class="parameter-card"><strong>🧠 Hidden Neurons</strong><span>The size of the hidden layer in bird brains. More neurons create more expressive behaviours.</span></div>
         </div>
       </div>
 
       <div class="parameter-group">
-        <h3>Rovdjurs-evolution</h3>
+        <h3>Predator Evolution</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>Elite %</strong><span>Hur många rovdjur som går vidare oförändrade.</span></div>
-          <div class="parameter-card"><strong>Föräldrapool %</strong><span>Andel rovdjur som får reproducera sig.</span></div>
-          <div class="parameter-card"><strong>Mutationsfrekvens %</strong><span>Sannolikhet för mutation i varje vikt.</span></div>
-          <div class="parameter-card"><strong>Mutationsstyrka</strong><span>Hur dramatiska rovdjurens mutationer blir.</span></div>
-          <div class="parameter-card"><strong>🧠 Dolda neuroner</strong><span>Storlek på rovdjurens dolda lager.</span></div>
+          <div class="parameter-card"><strong>Elite %</strong><span>How many predators carry over unchanged.</span></div>
+          <div class="parameter-card"><strong>Parent Pool %</strong><span>The portion of predators allowed to reproduce.</span></div>
+          <div class="parameter-card"><strong>Mutation Rate %</strong><span>The probability of mutation for each weight.</span></div>
+          <div class="parameter-card"><strong>Mutation Power</strong><span>How dramatic the predator mutations become.</span></div>
+          <div class="parameter-card"><strong>🧠 Hidden Neurons</strong><span>The size of the hidden layer for predators.</span></div>
         </div>
       </div>
 
       <div class="parameter-group">
-        <h3>Balans & beteende</h3>
+        <h3>Balance & Behaviour</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>💨 Uthållighetskostnad</strong><span>Grundkostnad i uthållighet per rörelse. Höga värden straffar konstant sprint.</span></div>
-          <div class="parameter-card"><strong>🔋 Energi per rörelse</strong><span>Hur mycket energi som går åt vid varje uppdatering när fågeln rör sig.</span></div>
-          <div class="parameter-card"><strong>🚨 Varningsboost %</strong><span>Hastighetsbonus när en fågel får ett larm.</span></div>
-          <div class="parameter-card"><strong>🚨 Larmradie</strong><span>Hur långt en varning sprids till allierade.</span></div>
-          <div class="parameter-card"><strong>🍎 Energi per matbit</strong><span>Hur mycket energi en fågel får tillbaka av att äta.</span></div>
+          <div class="parameter-card"><strong>💨 Stamina Cost</strong><span>The base stamina cost per movement. High values punish constant sprinting.</span></div>
+          <div class="parameter-card"><strong>🔋 Energy per Movement</strong><span>How much energy is spent each update while a bird is moving.</span></div>
+          <div class="parameter-card"><strong>🚨 Warning Boost %</strong><span>The speed bonus a bird receives when it gets an alarm.</span></div>
+          <div class="parameter-card"><strong>🚨 Alarm Radius</strong><span>How far a warning spreads to allies.</span></div>
+          <div class="parameter-card"><strong>🍎 Energy per Food Item</strong><span>How much energy a bird regains from eating.</span></div>
         </div>
       </div>
 
       <div class="parameter-group">
-        <h3>Rovdjursinställningar</h3>
+        <h3>Predator Settings</h3>
         <div class="parameter-grid">
-          <div class="parameter-card"><strong>⚡ Jakthastighet</strong><span>Högsta fart rovdjuren kan uppnå under en jakt.</span></div>
-          <div class="parameter-card"><strong>🔋 Bo-laddning</strong><span>Hur snabbt rovdjuren laddar specialattacker från sitt bo.</span></div>
-          <div class="parameter-card"><strong>🍖 Energi per fångst</strong><span>Energi som återställs när ett byte tas.</span></div>
-          <div class="parameter-card"><strong>💪 Fitness per fångst</strong><span>Poäng som ges till rovdjuren för varje lyckad attack.</span></div>
-          <div class="parameter-card"><strong>📈 Progressiv evolution</strong><span>När detta är på skalar rovdjurens svårighetsgrad med fåglarnas framsteg.</span></div>
-          <div class="parameter-card"><strong>🎯 Packjakt</strong><span>Gör att rovdjur delar mål och koordinerar inflygningar mot ensamma fåglar.</span></div>
+          <div class="parameter-card"><strong>⚡ Hunting Speed</strong><span>The maximum velocity predators can reach during a chase.</span></div>
+          <div class="parameter-card"><strong>🔋 Nest Charge Rate</strong><span>How quickly predators charge special attacks from their nest.</span></div>
+          <div class="parameter-card"><strong>🍖 Energy per Capture</strong><span>The energy restored when prey is caught.</span></div>
+          <div class="parameter-card"><strong>💪 Fitness per Capture</strong><span>The points awarded to predators for each successful attack.</span></div>
+          <div class="parameter-card"><strong>📈 Progressive Evolution</strong><span>When enabled, predator difficulty scales with bird progress.</span></div>
+          <div class="parameter-card"><strong>🎯 Pack Hunting</strong><span>Allows predators to share targets and coordinate approaches against isolated birds.</span></div>
         </div>
       </div>
     </section>
