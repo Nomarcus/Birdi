@@ -397,6 +397,76 @@
     </div>
 
     <div class="section">
+      <div class="section-title collapsible" data-target="sensor">🛰️ Sensors &amp; Rewards</div>
+      <div id="sensor" class="collapse-content hidden">
+        <div class="grid">
+          <div class="control">
+            <label>📡 Ray Range</label>
+            <input type="range" id="rayRange" min="120" max="400" value="220">
+            <span class="chip" id="uiRayRange">220</span>
+          </div>
+          <div class="control">
+            <label>🛡️ Bird Avoid Gain</label>
+            <input type="range" id="avoidGainBird" min="0.5" max="2" step="0.05" value="1.2">
+            <span class="chip" id="uiAvoidGainBird">1.20</span>
+          </div>
+          <div class="control">
+            <label>🦅 Predator Avoid Gain</label>
+            <input type="range" id="avoidGainPred" min="0.5" max="2" step="0.05" value="1.2">
+            <span class="chip" id="uiAvoidGainPred">1.20</span>
+          </div>
+          <div class="control">
+            <label>🎚️ Output Mix</label>
+            <input type="range" id="mixOutput" min="0.3" max="1" step="0.05" value="0.8">
+            <span class="chip" id="uiMixOutput">0.80</span>
+          </div>
+          <div class="control">
+            <label>🛡️ Safe Ray Threshold</label>
+            <input type="range" id="safePred" min="0.2" max="0.8" step="0.05" value="0.35">
+            <span class="chip" id="uiSafePred">0.35</span>
+          </div>
+          <div class="control">
+            <label>⏱️ Idle Frames</label>
+            <input type="range" id="idleFrames" min="30" max="120" value="45">
+            <span class="chip" id="uiIdleFrames">45</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="control">
+            <label>🏆 k_p1 (Pred Progress)</label>
+            <input type="range" id="kp1" min="0" max="0.005" step="0.0001" value="0.0015">
+            <span class="chip" id="uiKp1">0.0015</span>
+          </div>
+          <div class="control">
+            <label>🎯 k_p2 (Flank/Ambush)</label>
+            <input type="range" id="kp2" min="0" max="0.2" step="0.005" value="0.05">
+            <span class="chip" id="uiKp2">0.050</span>
+          </div>
+          <div class="control">
+            <label>🐦 k_b1 (Progress)</label>
+            <input type="range" id="kb1" min="0" max="0.005" step="0.0001" value="0.0015">
+            <span class="chip" id="uiKb1">0.0015</span>
+          </div>
+          <div class="control">
+            <label>🪵 k_b2 (Delivery Bonus)</label>
+            <input type="range" id="kb2" min="0" max="1" step="0.01" value="0.2">
+            <span class="chip" id="uiKb2">0.20</span>
+          </div>
+          <div class="control">
+            <label>🧱 k_b3 (Wall Safety)</label>
+            <input type="range" id="kb3" min="0" max="1" step="0.01" value="0.45">
+            <span class="chip" id="uiKb3">0.45</span>
+          </div>
+          <div class="control">
+            <label>🎲 k_b4 (Idle Penalty)</label>
+            <input type="range" id="kb4" min="0" max="0.2" step="0.005" value="0.02">
+            <span class="chip" id="uiKb4">0.02</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">📊 Live Statistics</div>
       <div class="stats-grid">
         <div class="stat-card">
@@ -459,6 +529,74 @@
         </div>
       </div>
     </div>
+
+    <div class="section">
+      <div class="section-title">🧭 Behavior Telemetry</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">🚧 Bird Wall Hits</div>
+          <div class="stat-value" id="birdWallCrashes">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🪨 Predator Wall Hits</div>
+          <div class="stat-value" id="predWallCrashes">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">📏 Avg Wall Distance</div>
+          <div class="stat-value" id="avgWallDist">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🪵 Twig Deliveries</div>
+          <div class="stat-value" id="twigDeliveriesStat">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🎲 Idle Breaks</div>
+          <div class="stat-value" id="idleBreaksStat">0</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">🐦 EVADE</div>
+          <div class="stat-value" id="birdStateEvade">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🐦 Collect Twig</div>
+          <div class="stat-value" id="birdStateTwig">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🐦 Forage</div>
+          <div class="stat-value" id="birdStateForage">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🐦 Return Home</div>
+          <div class="stat-value" id="birdStateReturn">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🦅 Search</div>
+          <div class="stat-value" id="predStateSearch">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🦅 Chase</div>
+          <div class="stat-value" id="predStateChase">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🦅 Flank</div>
+          <div class="stat-value" id="predStateFlank">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🦅 Ambush</div>
+          <div class="stat-value" id="predStateAmbush">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🦅 Retreat</div>
+          <div class="stat-value" id="predStateRetreat">0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🦅 Nest</div>
+          <div class="stat-value" id="predStateNest">0s</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -488,6 +626,16 @@
     const TWIG_IDLE_PENALTY = 2;
     const TWIG_IDLE_INTERVAL = 45;
     const TWIG_DEATH_RATIO = 0.3;
+
+    let RAY_RANGE = 220; // @added
+    const RAY_ANGLES = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, Math.PI]; // @added
+    let AVOID_GAIN_F = 1.2; // @added
+    let AVOID_GAIN_P = 1.2; // @added
+    let MIX_OUTPUT = 0.8; // @added
+    let SAFE_PRED_N = 0.35; // @added
+    let IDLE_FRAME_LIMIT = 45; // @added
+
+    let k_p1 = 0.0015, k_p2 = 0.05, k_b1 = 0.0015, k_b2 = 0.2, k_b3 = 0.45, k_b4 = 0.02; // @added
 
     const GROUND_PENALTY_ENERGY = 20;
     const GROUND_PENALTY_STAMINA = 12;
@@ -577,6 +725,16 @@
     let recordLargestNest = 0;
     let recordMostKills = 0;
 
+    const telemetry = { // @added
+      birdWallCrashes: 0, // @added
+      predWallCrashes: 0, // @added
+      twigDeliveries: 0, // @added
+      birdStateTime: { EVADE: 0, COLLECT_TWIG: 0, FORAGE: 0, RETURN_HOME: 0 }, // @added
+      predStateTime: { SEARCH: 0, CHASE: 0, FLANK: 0, AMBUSH: 0, RETREAT: 0, NEST: 0 }, // @added
+      idleBreaks: 0, // @added
+      avgWallDist: 0 // @added
+    }; // @added
+
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const GROUND_Y = canvas.height - 50;
@@ -584,6 +742,46 @@
     const NEST_Y = GROUND_Y - 140;
     let TWIG_PILE_X = canvas.width / 2;
     let TWIG_PILE_Y = GROUND_Y - 10;
+
+    function sampleRay(x, y, a, maxD = RAY_RANGE, step = 6) { // @added
+      const dx = Math.cos(a), dy = Math.sin(a); // @added
+      for (let d = 6; d <= maxD; d += step) { // @added
+        const rx = x + dx * d, ry = y + dy * d; // @added
+        if (rx <= 0 || ry <= 0 || rx >= canvas.width || ry >= GROUND_Y) return d / maxD; // @added
+        for (const t of (trees || [])) if (rx > t.x && rx < t.x + t.width && ry > t.y) return d / maxD; // @added
+      } // @added
+      return 1; // @added
+    }
+
+    function nearestBird(x, y) { // @added
+      let best = null, bestDist = Infinity; // @added
+      for (const b of birds) { // @added
+        if (!b.alive || b.hiding) continue; // @added
+        const d = Math.hypot(x - b.x, y - b.y); // @added
+        if (d < bestDist) { bestDist = d; best = b; } // @added
+      } // @added
+      return { target: best, dist: bestDist }; // @added
+    }
+
+    function nearestPredator(x, y) { // @added
+      let best = null, bestDist = Infinity; // @added
+      for (const p of predators) { // @added
+        if (!p.alive || p.inNest) continue; // @added
+        const d = Math.hypot(x - p.x, y - p.y); // @added
+        if (d < bestDist) { bestDist = d; best = p; } // @added
+      } // @added
+      return { target: best, dist: bestDist }; // @added
+    }
+
+    function nearestTwig(x, y) { // @added
+      let best = null, bestDist = Infinity; // @added
+      for (const t of twigPile) { // @added
+        if (t.carriedBy) continue; // @added
+        const d = Math.hypot(x - t.x, y - t.y); // @added
+        if (d < bestDist) { bestDist = d; best = t; } // @added
+      } // @added
+      return { target: best, dist: bestDist }; // @added
+    }
     const TWIG_PILE_WIDTH = 220;
     const TWIG_PILE_HEIGHT = 120;
     let PLAYFIELD_OFFSET_X = 0;
@@ -893,10 +1091,59 @@
       KILL_ENERGY = parseInt(e.target.value);
       document.getElementById('uiKillEnergy').textContent = KILL_ENERGY;
     });
-    
+
     document.getElementById('killFitness').addEventListener('input', e => {
       KILL_FITNESS = parseInt(e.target.value);
       document.getElementById('uiKillFitness').textContent = KILL_FITNESS;
+    });
+
+    document.getElementById('rayRange').addEventListener('input', e => { // @added
+      RAY_RANGE = parseInt(e.target.value, 10); // @added
+      document.getElementById('uiRayRange').textContent = RAY_RANGE; // @added
+    });
+    document.getElementById('avoidGainBird').addEventListener('input', e => { // @added
+      AVOID_GAIN_F = parseFloat(e.target.value); // @added
+      document.getElementById('uiAvoidGainBird').textContent = AVOID_GAIN_F.toFixed(2); // @added
+    });
+    document.getElementById('avoidGainPred').addEventListener('input', e => { // @added
+      AVOID_GAIN_P = parseFloat(e.target.value); // @added
+      document.getElementById('uiAvoidGainPred').textContent = AVOID_GAIN_P.toFixed(2); // @added
+    });
+    document.getElementById('mixOutput').addEventListener('input', e => { // @added
+      MIX_OUTPUT = parseFloat(e.target.value); // @added
+      document.getElementById('uiMixOutput').textContent = MIX_OUTPUT.toFixed(2); // @added
+    });
+    document.getElementById('safePred').addEventListener('input', e => { // @added
+      SAFE_PRED_N = parseFloat(e.target.value); // @added
+      document.getElementById('uiSafePred').textContent = SAFE_PRED_N.toFixed(2); // @added
+    });
+    document.getElementById('idleFrames').addEventListener('input', e => { // @added
+      IDLE_FRAME_LIMIT = parseInt(e.target.value, 10); // @added
+      document.getElementById('uiIdleFrames').textContent = IDLE_FRAME_LIMIT; // @added
+    });
+    document.getElementById('kp1').addEventListener('input', e => { // @added
+      k_p1 = parseFloat(e.target.value); // @added
+      document.getElementById('uiKp1').textContent = k_p1.toFixed(4); // @added
+    });
+    document.getElementById('kp2').addEventListener('input', e => { // @added
+      k_p2 = parseFloat(e.target.value); // @added
+      document.getElementById('uiKp2').textContent = k_p2.toFixed(3); // @added
+    });
+    document.getElementById('kb1').addEventListener('input', e => { // @added
+      k_b1 = parseFloat(e.target.value); // @added
+      document.getElementById('uiKb1').textContent = k_b1.toFixed(4); // @added
+    });
+    document.getElementById('kb2').addEventListener('input', e => { // @added
+      k_b2 = parseFloat(e.target.value); // @added
+      document.getElementById('uiKb2').textContent = k_b2.toFixed(2); // @added
+    });
+    document.getElementById('kb3').addEventListener('input', e => { // @added
+      k_b3 = parseFloat(e.target.value); // @added
+      document.getElementById('uiKb3').textContent = k_b3.toFixed(2); // @added
+    });
+    document.getElementById('kb4').addEventListener('input', e => { // @added
+      k_b4 = parseFloat(e.target.value); // @added
+      document.getElementById('uiKb4').textContent = k_b4.toFixed(2); // @added
     });
     
     document.getElementById('predEvolve').addEventListener('change', e => {
@@ -922,13 +1169,14 @@
       update() {
         this.x += this.vx;
         this.y += this.vy;
+
         this.vy += 0.15;
         this.vx *= 0.98;
         this.life--;
       }
-      draw() {
-        const alpha = clamp(this.life / this.maxLife);
-        ctx.save();
+        draw() {
+          const alpha = clamp(this.life / this.maxLife);
+          ctx.save();
         ctx.globalAlpha = alpha;
         ctx.fillStyle = this.color;
         ctx.beginPath();
@@ -1365,8 +1613,8 @@
       constructor(type, brain) {
         this.type = type;
         this.typeData = BIRD_TYPES[type];
-        // UPDATED Brain: 37 inputs, 4 outputs
-        this.brain = brain || new Brain(37, BIRD_HIDDEN, 4);
+        // UPDATED Brain: 43 inputs, 4 outputs // @changed
+        this.brain = brain || new Brain(43, BIRD_HIDDEN, 4); // @changed
         this.reset();
       }
       reset() {
@@ -1394,6 +1642,18 @@
         this.groundContact = 0;
         this.wallContact = 0;
         this.ceilingContact = 0;
+        this.state = 'FORAGE'; // @added
+        this.stateTime = 0; // @added
+        this.stateLock = 0; // @added
+        this.prevProgress = null; // @added
+        this.idleTimer = 0; // @added
+        this.lastIdlePos = { x: this.x, y: this.y }; // @added
+        this.avoidX = 0; // @added
+        this.avoidY = 0; // @added
+        this.attractX = 0; // @added
+        this.attractY = 0; // @added
+        this.rayValues = RAY_ANGLES.map(() => 1); // @added
+        this.lastThreat = null; // @added
       }
       think() {
         if (!this.alive || this.hiding) return;
@@ -1409,16 +1669,9 @@
           }
         }
         
-        let closestPred = null;
-        let minPredDist = Infinity;
-        for (const p of predators) {
-          if (!p.alive || p.inNest) continue;
-          const d = Math.hypot(this.x - p.x, this.y - p.y);
-          if (d < minPredDist) {
-            minPredDist = d;
-            closestPred = p;
-          }
-        }
+        const predInfo = nearestPredator(this.x, this.y); // @added
+        let closestPred = predInfo.target; // @added
+        let minPredDist = predInfo.dist; // @added
         
         let closestHide = null;
         let minHideDist = Infinity;
@@ -1432,18 +1685,13 @@
         }
         
         // NEW: Find nearest twig
-        let closestTwig = null;
-        let minTwigDist = Infinity;
-        if (!this.hasTwig) {
-          for (const t of twigPile) {
-            if (t.carriedBy) continue;
-            const d = Math.hypot(this.x - t.x, this.y - t.y);
-            if (d < minTwigDist) {
-              minTwigDist = d;
-              closestTwig = t;
-            }
-          }
-        }
+        let closestTwig = null; // @changed
+        let minTwigDist = Infinity; // @changed
+        if (!this.hasTwig) { // @changed
+          const twigInfo = nearestTwig(this.x, this.y); // @added
+          closestTwig = twigInfo.target; // @added
+          minTwigDist = twigInfo.dist; // @added
+        } // @changed
         
         // NEW: Distance to nest
         const nestDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
@@ -1461,42 +1709,71 @@
         let dirX = this.vx;
         let dirY = this.vy;
         if (headingMag < 0.1) {
-          dirX = this.facing;
-          dirY = 0;
+          dirX = this.facing; // @changed
+          dirY = 0; // @changed
         }
         const dirLen = Math.hypot(dirX, dirY) || 1;
         const normDirX = dirX / dirLen;
         const normDirY = dirY / dirLen;
-        const leftDirX = -normDirY;
-        const leftDirY = normDirX;
+        const aimAngle = Math.atan2(normDirY, normDirX); // @added
 
-        let frontTree = Infinity;
-        let leftTree = Infinity;
-        let rightTree = Infinity;
-        for (const tree of trees) {
-          const tx = tree.x + tree.width / 2;
-          const ty = tree.y;
-          const dx = tx - this.x;
-          const dy = ty - this.y;
-          const forward = dx * normDirX + dy * normDirY;
-          const lateral = dx * leftDirX + dy * leftDirY;
-          if (forward > 0 && forward < frontTree) frontTree = forward;
-          if (lateral > 0 && lateral < leftTree) leftTree = lateral;
-          if (lateral < 0 && -lateral < rightTree) rightTree = -lateral;
-        }
+        this.rayValues = RAY_ANGLES.map(offset => sampleRay(this.x, this.y, aimAngle + offset)); // @added
+        let avoidX = 0; // @added
+        let avoidY = 0; // @added
+        this.rayValues.forEach((val, idx) => { // @added
+          const urgency = Math.max(0, SAFE_PRED_N - val); // @changed
+          if (urgency <= 0) return; // @added
+          const angle = aimAngle + RAY_ANGLES[idx]; // @added
+          avoidX -= Math.cos(angle) * (urgency / SAFE_PRED_N); // @changed
+          avoidY -= Math.sin(angle) * (urgency / SAFE_PRED_N); // @changed
+        }); // @added
+        this.avoidX = avoidX * AVOID_GAIN_F; // @added
+        this.avoidY = avoidY * AVOID_GAIN_F; // @added
 
-        const normDist = d => (isFinite(d) ? Math.min(d / 400, 1) : 1);
-        const frontTreeNorm = normDist(frontTree);
-        const leftTreeNorm = normDist(leftTree);
-        const rightTreeNorm = normDist(rightTree);
         const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y);
+        const normDist = d => (isFinite(d) ? Math.min(d / RAY_RANGE, 1) : 1); // @changed
         const wallDistNorm = normDist(wallDist);
         const leftWallNorm = normDist(this.x);
         const rightWallNorm = normDist(canvas.width - this.x);
         const ceilingDistNorm = normDist(this.y);
         const groundDistNorm = normDist(GROUND_Y - this.y);
 
-        // UPPDATERAD: 37 inputs
+        this.updateBirdState({ // @added
+          closestFood,
+          minFoodDist,
+          closestPred,
+          minPredDist,
+          closestTwig,
+          minTwigDist,
+          nestDist,
+          wallDistNorm
+        }); // @added
+
+        const attract = this.computeAttractionVector({ // @added
+          closestFood,
+          closestTwig,
+          nestDist,
+          minTwigDist,
+          minFoodDist
+        }); // @added
+        this.attractX = attract.x; // @added
+        this.attractY = attract.y; // @added
+
+        telemetry.birdStateTime[this.state] += 1; // @added
+
+        const frontTreeNorm = this.rayValues[0]; // @added
+        const leftTreeNorm = this.rayValues[1]; // @added
+        const rightTreeNorm = this.rayValues[2]; // @added
+
+        // UPPDATERAD: 43 inputs // @changed
+        const forcedRecall = this.forcedReturn > 0; // @added
+        const frontRay = this.rayValues[0]; // @added
+        const leftRay = this.rayValues[1]; // @added
+        const rightRay = this.rayValues[2]; // @added
+        const flankRay = this.rayValues[3]; // @added
+        const rearLeftRay = this.rayValues[4]; // @added
+        const backRay = this.rayValues[5]; // @added
+
         const inputs = [
           this.x / canvas.width,
           this.y / canvas.height,
@@ -1535,7 +1812,8 @@
           leftWallNorm, // 34
           rightWallNorm, // 35
           ceilingDistNorm, // 36
-          groundDistNorm // 37
+          groundDistNorm, // 37
+          ...this.rayValues // 38-43 // @added
         ];
 
         // UPDATED: 4 outputs
@@ -1545,6 +1823,98 @@
         this.wantHide = outputs[2] > 0.3;
         this.wantTwig = outputs[3] > 0.3; // NEW
       }
+      updateBirdState(ctx) { // @added
+        if (this.stateLock > 0) this.stateLock--; // @added
+        this.stateTime++; // @added
+        const threatClose = ctx.closestPred && ctx.minPredDist < ALARM_RANGE * 0.75; // @added
+        const threatGone = !ctx.closestPred || ctx.minPredDist > ALARM_RANGE * 1.2; // @added
+        if (threatClose) { // @added
+          this.lastThreat = ctx.closestPred; // @added
+          if (this.state !== 'EVADE' && this.stateLock === 0) { // @added
+            this.state = 'EVADE'; // @added
+            this.stateTime = 0; // @added
+            this.stateLock = 20; // @added
+          } // @added
+          return; // @added
+        }
+        if (this.state === 'EVADE' && !threatClose) { // @added
+          if (threatGone && this.stateLock === 0) { // @added
+            this.state = this.hasTwig ? 'RETURN_HOME' : 'FORAGE'; // @added
+            this.stateTime = 0; // @added
+            this.stateLock = 18; // @added
+          } // @added
+          return; // @added
+        }
+
+        let desired = this.state; // @added
+        if (this.hasTwig) { // @added
+          desired = 'RETURN_HOME'; // @added
+        } else if (ctx.closestTwig && (this.wantTwig || ctx.minTwigDist < 260)) { // @added
+          desired = 'COLLECT_TWIG'; // @added
+        } else if (this.energy < this.maxEnergy * 0.45) { // @added
+          desired = 'FORAGE'; // @added
+        } else if (ctx.closestTwig) { // @added
+          desired = 'COLLECT_TWIG'; // @added
+        } else { // @added
+          desired = 'FORAGE'; // @added
+        }
+
+        if (desired !== this.state && this.stateLock === 0) { // @added
+          this.state = desired; // @added
+          this.stateTime = 0; // @added
+          this.stateLock = 14; // @added
+          this.prevProgress = null; // @added
+        } // @added
+      }
+      computeAttractionVector(ctx) { // @added
+        let tx = 0; // @added
+        let ty = 0; // @added
+        if (this.state === 'EVADE' && this.lastThreat) { // @added
+          const dx = this.x - this.lastThreat.x; // @added
+          const dy = this.y - this.lastThreat.y; // @added
+          const dist = Math.hypot(dx, dy) || 1; // @added
+          tx += dx / dist; // @added
+          ty += dy / dist; // @added
+        } else if (this.state === 'COLLECT_TWIG' && ctx.closestTwig) { // @added
+          const dx = ctx.closestTwig.x - this.x; // @added
+          const dy = ctx.closestTwig.y - this.y; // @added
+          const dist = Math.hypot(dx, dy) || 1; // @added
+          tx += dx / dist; // @added
+          ty += dy / dist; // @added
+          if (this.prevProgress != null) { // @added
+            this.fitness += (this.prevProgress - dist) * k_b1; // @added
+          } // @added
+          this.prevProgress = dist; // @added
+        } else if (this.state === 'RETURN_HOME') { // @added
+          const dx = birdNest.x - this.x; // @added
+          const dy = birdNest.y - this.y; // @added
+          const dist = Math.hypot(dx, dy) || 1; // @added
+          tx += dx / dist; // @added
+          ty += dy / dist; // @added
+          if (this.prevProgress != null) { // @added
+            this.fitness += (this.prevProgress - dist) * k_b1; // @added
+          } // @added
+          this.prevProgress = dist; // @added
+        } else { // @added
+          if (ctx.closestFood) { // @added
+            const dx = ctx.closestFood.x - this.x; // @added
+            const dy = ctx.closestFood.y - this.y; // @added
+            const dist = Math.hypot(dx, dy) || 1; // @added
+            tx += dx / dist; // @added
+            ty += dy / dist; // @added
+          } else { // @added
+            tx += Math.cos(globalTime * 0.01 + this.age * 0.02); // @added
+            ty += Math.sin(globalTime * 0.01 + this.age * 0.02); // @added
+          } // @added
+          this.prevProgress = null; // @added
+        }
+        const mag = Math.hypot(tx, ty); // @added
+        if (mag > 0) { // @added
+          tx = (tx / mag) * 0.6; // @added
+          ty = (ty / mag) * 0.6; // @added
+        } // @added
+        return { x: tx, y: ty }; // @added
+      }
       update() {
         if (!this.alive) return;
 
@@ -1552,9 +1922,27 @@
 
         this.age++;
         recordLongestLife = Math.max(recordLongestLife, this.age);
-        
+
         if (this.vx > 0.1) this.facing = 1;
         else if (this.vx < -0.1) this.facing = -1;
+
+        const idleMove = Math.hypot(this.x - this.lastIdlePos.x, this.y - this.lastIdlePos.y); // @added
+        if (idleMove < 3) { // @added
+          this.idleTimer++; // @added
+        } else { // @added
+          this.idleTimer = 0; // @added
+          this.lastIdlePos = { x: this.x, y: this.y }; // @added
+        } // @added
+        if (this.idleTimer > IDLE_FRAME_LIMIT) { // @added
+          const angle = Math.random() * Math.PI * 2; // @added
+          const nudge = 0.8 + Math.random() * 0.6; // @added
+          this.vx += Math.cos(angle) * nudge; // @added
+          this.vy += Math.sin(angle) * nudge * 0.6; // @added
+          this.fitness -= k_b4; // @added
+          telemetry.idleBreaks += 1; // @added
+          this.idleTimer = 0; // @added
+          this.lastIdlePos = { x: this.x, y: this.y }; // @added
+        } // @added
         
         // Cooldown counter
         if (this.hideCooldown > 0) {
@@ -1612,6 +2000,9 @@
             this.fitness += TWIG_FITNESS_BONUS;
             twigsInNest++;
             recordLargestNest = Math.max(recordLargestNest, twigsInNest);
+            telemetry.twigDeliveries += 1; // @added
+            this.fitness += k_b2; // @added
+            this.prevProgress = null; // @added
           }
         } else if (!this.hasTwig) {
           // Always pick up a twig when entering the pile
@@ -1655,8 +2046,10 @@
         if (this.warned) speedMult *= (1 + WARN_BOOST);
         if (this.hasTwig) speedMult *= 0.8; // Slower with a twig
         
-        this.vx += this.moveX * 0.7 * speedMult;
-        this.vy += this.moveY * 0.7 * speedMult;
+        const steerX = (this.moveX * MIX_OUTPUT) + this.avoidX + this.attractX; // @added
+        const steerY = (this.moveY * MIX_OUTPUT) + this.avoidY + this.attractY; // @added
+        this.vx += steerX * 0.7 * speedMult; // @changed
+        this.vy += steerY * 0.7 * speedMult; // @changed
         
         const moveSpeed = Math.hypot(this.vx, this.vy);
         if (moveSpeed > 5) {
@@ -1667,7 +2060,7 @@
         this.vy += 0.2;
         this.vx *= 0.97;
         this.vy *= 0.97;
-        
+
         const maxSpeed = 8 * speedMult;
         const speed = Math.hypot(this.vx, this.vy);
         if (speed > maxSpeed) {
@@ -1677,6 +2070,11 @@
         
         this.x += this.vx;
         this.y += this.vy;
+
+        const wallDistance = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y); // @added
+        const wallSafety = wallDistance / RAY_RANGE; // @added
+        this.fitness += wallSafety * k_b3; // @added
+        telemetry.avgWallDist = telemetry.avgWallDist * 0.98 + wallDistance * 0.02; // @added
         
         // Wall collision
         let hitLeftWall = false;
@@ -1714,6 +2112,9 @@
         }
 
         if (hitLeftWall || hitRightWall) {
+          telemetry.birdWallCrashes += 1; // @added
+          const push = hitLeftWall ? 1 : -1; // @added
+          this.vx += push * 0.6; // @added
           this.wallContact++;
           const contactSeverity = 1 + this.wallContact * 0.2;
           this.fitness -= WALL_PENALTY_BASE * contactSeverity;
@@ -1723,6 +2124,7 @@
             WALL_PENALTY_ENERGY * contactSeverity,
             COLLISION_ENERGY_FLOOR
           );
+          this.energy = Math.max(0, this.energy - WALL_PENALTY_ENERGY * 0.4); // @added
         } else {
           this.wallContact = 0;
         }
@@ -1934,7 +2336,7 @@
     
     class Predator {
       constructor(brain) {
-        this.brain = brain || new Brain(20, PRED_HIDDEN, 3);
+        this.brain = brain || new Brain(26, PRED_HIDDEN, 3); // @changed
         this.reset();
       }
       reset() {
@@ -1961,6 +2363,16 @@
         this.wallCrashTimer = 0;
         this.cornerStall = 0;
         this.nestCooldown = 0;
+        this.state = 'NEST'; // @added
+        this.stateTime = 0; // @added
+        this.stateLock = 0; // @added
+        this.rayValues = RAY_ANGLES.map(() => 1); // @added
+        this.avoidX = 0; // @added
+        this.avoidY = 0; // @added
+        this.attractX = 0; // @added
+        this.attractY = 0; // @added
+        this.idleTimer = 0; // @added
+        this.lastIdlePos = { x: this.x, y: this.y }; // @added
       }
       enterNest() {
         this.inNest = true;
@@ -1972,6 +2384,12 @@
         this.y = this.homeNest.y;
         this.prevTargetDist = null;
         this.prevNestDist = null;
+        this.state = 'NEST'; // @added
+        this.stateTime = 0; // @added
+        this.avoidX = 0; // @added
+        this.avoidY = 0; // @added
+        this.attractX = 0; // @added
+        this.attractY = 0; // @added
       }
       exitNest(force = false) {
         this.inNest = false;
@@ -1990,6 +2408,12 @@
         }
         this.prevTargetDist = null;
         this.prevNestDist = null;
+        this.state = 'SEARCH'; // @added
+        this.stateTime = 0; // @added
+        this.avoidX = 0; // @added
+        this.avoidY = 0; // @added
+        this.attractX = 0; // @added
+        this.attractY = 0; // @added
       }
       update() {
         if (!this.alive) return;
@@ -1998,6 +2422,23 @@
         }
         if (this.vx > 0.1) this.facing = 1;
         else if (this.vx < -0.1) this.facing = -1;
+
+        const idleMove = Math.hypot(this.x - this.lastIdlePos.x, this.y - this.lastIdlePos.y); // @added
+        if (idleMove < 4) { // @added
+          this.idleTimer++; // @added
+        } else { // @added
+          this.idleTimer = 0; // @added
+          this.lastIdlePos = { x: this.x, y: this.y }; // @added
+        } // @added
+        if (this.idleTimer > IDLE_FRAME_LIMIT) { // @added
+          const angle = Math.random() * Math.PI * 2; // @added
+          this.vx += Math.cos(angle) * 1.2; // @added
+          this.vy += Math.sin(angle) * 0.8; // @added
+          this.fitness -= k_p1 * 10; // @added
+          telemetry.idleBreaks += 1; // @added
+          this.idleTimer = 0; // @added
+          this.lastIdlePos = { x: this.x, y: this.y }; // @added
+        } // @added
 
         if (this.inNest) {
           this.nestTime++;
@@ -2009,6 +2450,8 @@
             this.forcedReturn = 0;
             this.cornerStall = 0;
           }
+
+          telemetry.predStateTime.NEST += 1; // @added
 
           if (this.nestTime >= PRED_NEST_MAX_TIME) {
             this.exitNest(true);
@@ -2026,16 +2469,9 @@
         if (this.wallCrashTimer > 0) this.wallCrashTimer--;
         if (this.forcedReturn > 0) this.forcedReturn--;
 
-        let target = null;
-        let minDist = Infinity;
-        for (const b of birds) {
-          if (!b.alive || b.hiding) continue;
-          const d = Math.hypot(this.x - b.x, this.y - b.y);
-          if (d < minDist) {
-            minDist = d;
-            target = b;
-          }
-        }
+        const huntInfo = nearestBird(this.x, this.y); // @added
+        let target = huntInfo.target; // @added
+        let minDist = huntInfo.dist; // @added
 
         const previousTargetDist = target ? (this.prevTargetDist ?? minDist) : null;
 
@@ -2066,30 +2502,43 @@
         const dirLen = Math.hypot(dirX, dirY) || 1;
         const normDirX = dirX / dirLen;
         const normDirY = dirY / dirLen;
-        const leftDirX = -normDirY;
-        const leftDirY = normDirX;
+        const aimAngle = Math.atan2(normDirY, normDirX); // @added
 
-        let frontTree = Infinity;
-        let leftTree = Infinity;
-        let rightTree = Infinity;
-        for (const tree of trees) {
-          const tx = tree.x + tree.width / 2;
-          const ty = tree.y;
-          const dx = tx - this.x;
-          const dy = ty - this.y;
-          const forward = dx * normDirX + dy * normDirY;
-          const lateral = dx * leftDirX + dy * leftDirY;
-          if (forward > 0 && forward < frontTree) frontTree = forward;
-          if (lateral > 0 && lateral < leftTree) leftTree = lateral;
-          if (lateral < 0 && -lateral < rightTree) rightTree = -lateral;
-        }
+        this.rayValues = RAY_ANGLES.map(offset => sampleRay(this.x, this.y, aimAngle + offset)); // @added
+        let avoidX = 0; // @added
+        let avoidY = 0; // @added
+        this.rayValues.forEach((val, idx) => { // @added
+          const urgency = Math.max(0, SAFE_PRED_N - val); // @added
+          if (urgency <= 0) return; // @added
+          const angle = aimAngle + RAY_ANGLES[idx]; // @added
+          avoidX -= Math.cos(angle) * (urgency / SAFE_PRED_N); // @added
+          avoidY -= Math.sin(angle) * (urgency / SAFE_PRED_N); // @added
+        }); // @added
+        this.avoidX = avoidX * AVOID_GAIN_P; // @added
+        this.avoidY = avoidY * AVOID_GAIN_P; // @added
 
-        const normTree = d => (isFinite(d) ? Math.min(d / 500, 1) : 1);
-        const frontTreeNorm = normTree(frontTree);
-        const leftTreeNorm = normTree(leftTree);
-        const rightTreeNorm = normTree(rightTree);
-        const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y);
-        const wallDistNorm = normTree(wallDist);
+        const wallDist = Math.min(this.x, canvas.width - this.x, this.y, GROUND_Y - this.y); // @added
+        const normTree = d => (isFinite(d) ? Math.min(d / RAY_RANGE, 1) : 1); // @changed
+        const wallDistNorm = normTree(wallDist); // @changed
+
+        this.updatePredState({ // @added
+          target,
+          minDist,
+          packMates,
+          distToNest,
+          forcedReturn: this.forcedReturn > 0,
+          energy: this.energy
+        }); // @added
+        const attraction = this.computePredAttraction({ // @added
+          target,
+          minDist,
+          packMates,
+          distToNest,
+          aimAngle
+        }); // @added
+        this.attractX = attraction.x; // @added
+        this.attractY = attraction.y; // @added
+        telemetry.predStateTime[this.state] += 1; // @added
 
         if (wallDist < PRED_CORNER_WARN_DIST) {
           const severity = 1 - Math.min(wallDist / PRED_CORNER_WARN_DIST, 1);
@@ -2103,6 +2552,13 @@
         if (this.cornerStall > 18) {
           this.forcedReturn = Math.max(this.forcedReturn, Math.floor(PRED_WALL_FORCED_RETURN * 0.6));
         }
+
+        if (previousTargetDist !== null && target) { // @added
+          this.fitness += (previousTargetDist - minDist) * k_p1; // @added
+        } // @added
+        if (this.state === 'FLANK' || this.state === 'AMBUSH') { // @added
+          this.fitness += k_p2; // @added
+        } // @added
 
         const inputs = [
           this.x / canvas.width,
@@ -2121,20 +2577,25 @@
           birds.filter(b => b.alive && !b.hiding).length / BIRD_COUNT,
           this.inNest ? 1 : 0,
           this.huntBonus,
-          frontTreeNorm,
-          leftTreeNorm,
-          rightTreeNorm,
-          wallDistNorm
+          frontRay,
+          leftRay,
+          rightRay,
+          wallDistNorm,
+          flankRay,
+          rearLeftRay,
+          backRay,
+          forcedRecall ? 1 : 0,
+          this.state === 'CHASE' ? 1 : 0,
+          this.state === 'RETREAT' ? 1 : 0
         ];
 
         const outputs = this.brain.forward(inputs);
 
-        const forcedRecall = this.forcedReturn > 0;
         const evolutionBonus = PRED_EVOLVE ? (1 + this.huntBonus * 0.1) : 1;
         const packBonus = PACK_HUNT ? (1 + packMates * 0.1) : 1;
         const recallThrottle = forcedRecall ? 0.55 : 1;
-        const moveX = outputs[0] * 0.8 * evolutionBonus * packBonus * recallThrottle;
-        const moveY = outputs[1] * 0.8 * evolutionBonus * packBonus * recallThrottle;
+        const moveX = outputs[0] * 0.8 * evolutionBonus * packBonus * recallThrottle; // @changed
+        const moveY = outputs[1] * 0.8 * evolutionBonus * packBonus * recallThrottle; // @changed
         let wantNest = outputs[2] > 0.4;
         if (forcedRecall || this.energy < this.maxEnergy * 0.25) {
           wantNest = true;
@@ -2143,8 +2604,10 @@
           this.fitness -= 0.5;
         }
 
-        this.vx += moveX;
-        this.vy += moveY;
+        const steerX = moveX * MIX_OUTPUT + this.avoidX + this.attractX; // @added
+        const steerY = moveY * MIX_OUTPUT + this.avoidY + this.attractY; // @added
+        this.vx += steerX; // @changed
+        this.vy += steerY; // @changed
         this.vx *= 0.96;
         this.vy *= 0.96;
         
@@ -2157,7 +2620,9 @@
         
         this.x += this.vx;
         this.y += this.vy;
-        
+
+        this.fitness += wallDistNorm * k_p2 * 0.5; // @added
+
         if (this.x < 12) {
           this.x = 12;
           this.vx = Math.abs(this.vx) * 0.25;
@@ -2310,6 +2775,83 @@
         }
       }
 
+      updatePredState(ctx) { // @added
+        if (this.stateLock > 0) this.stateLock--; // @added
+        if (this.inNest) { // @added
+          if (this.state !== 'NEST') { // @added
+            this.state = 'NEST'; // @added
+            this.stateTime = 0; // @added
+            this.stateLock = 10; // @added
+          } else { // @added
+            this.stateTime++; // @added
+          } // @added
+          return; // @added
+        } // @added
+        this.stateTime++; // @added
+        let desired = this.state; // @added
+        if (ctx.forcedReturn || ctx.energy < this.maxEnergy * 0.3) { // @added
+          desired = 'RETREAT'; // @added
+        } else if (ctx.target && ctx.minDist < 160) { // @added
+          desired = 'CHASE'; // @added
+        } else if (ctx.target && ctx.packMates > 0 && ctx.minDist < 320) { // @added
+          desired = 'FLANK'; // @added
+        } else if (ctx.target && ctx.minDist < 480) { // @added
+          desired = 'AMBUSH'; // @added
+        } else { // @added
+          desired = 'SEARCH'; // @added
+        } // @added
+        if (this.state === 'RETREAT' && !ctx.forcedReturn && ctx.energy > this.maxEnergy * 0.55) { // @added
+          desired = ctx.target ? 'CHASE' : 'SEARCH'; // @added
+        } // @added
+        if (desired !== this.state && this.stateLock === 0) { // @added
+          this.state = desired; // @added
+          this.stateTime = 0; // @added
+          this.stateLock = 18; // @added
+        } // @added
+      } // @added
+
+      computePredAttraction(ctx) { // @added
+        let ax = 0; // @added
+        let ay = 0; // @added
+        if (this.state === 'RETREAT') { // @added
+          const dx = this.homeNest.x - this.x; // @added
+          const dy = this.homeNest.y - this.y; // @added
+          const dist = Math.hypot(dx, dy) || 1; // @added
+          ax += (dx / dist) * 1.2; // @added
+          ay += (dy / dist) * 1.2; // @added
+        } else if ((this.state === 'CHASE' || this.state === 'AMBUSH' || this.state === 'FLANK') && ctx.target) { // @added
+          const dx = ctx.target.x - this.x; // @added
+          const dy = ctx.target.y - this.y; // @added
+          const dist = Math.hypot(dx, dy) || 1; // @added
+          if (this.state === 'FLANK') { // @added
+            const flankAngle = ctx.aimAngle + (this.facing > 0 ? Math.PI / 2 : -Math.PI / 2); // @added
+            ax += Math.cos(flankAngle); // @added
+            ay += Math.sin(flankAngle); // @added
+          } else if (this.state === 'AMBUSH') { // @added
+            const leadX = dx + (ctx.target.vx || 0) * 18; // @added
+            const leadY = dy + (ctx.target.vy || 0) * 18; // @added
+            const leadDist = Math.hypot(leadX, leadY) || 1; // @added
+            ax += leadX / leadDist; // @added
+            ay += leadY / leadDist; // @added
+          } else { // @added
+            ax += dx / dist; // @added
+            ay += dy / dist; // @added
+          } // @added
+        } else if (this.state === 'SEARCH') { // @added
+          const roamAngle = globalTime * 0.01 + this.x * 0.001 + this.y * 0.001; // @added
+          ax += Math.cos(roamAngle) * 0.6; // @added
+          ay += Math.sin(roamAngle) * 0.6; // @added
+          ax += (this.homeNest.x - this.x) / Math.max(ctx.distToNest, 1) * 0.6; // @added
+          ay += (this.homeNest.y - this.y) / Math.max(ctx.distToNest, 1) * 0.6; // @added
+        }
+        const mag = Math.hypot(ax, ay); // @added
+        if (mag > 0) { // @added
+          ax = (ax / mag) * 0.8; // @added
+          ay = (ay / mag) * 0.8; // @added
+        } // @added
+        return { x: ax, y: ay }; // @added
+      }
+
       die(cause = 'exhaustion') {
         if (!this.alive) return;
         this.alive = false;
@@ -2340,6 +2882,9 @@
       applyWallCrash() {
         if (!this.alive) return;
         if (this.wallCrashTimer > 0) return;
+        telemetry.predWallCrashes += 1; // @added
+        this.vx += this.x < canvas.width / 2 ? 1.1 : -1.1; // @added
+        this.vy -= 0.6; // @added
         this.fitness -= PRED_WALL_CRASH_FITNESS;
         this.energy = Math.max(0, this.energy - this.maxEnergy * 0.3);
         this.energy = Math.min(this.energy, this.maxEnergy * PRED_WALL_CRASH_ENERGY_RATIO);
@@ -2682,6 +3227,22 @@
       document.getElementById('recordLongestLife').textContent = (recordLongestLife / 60).toFixed(1) + 's';
       document.getElementById('recordLargestNest').textContent = recordLargestNest;
       document.getElementById('recordMostKills').textContent = recordMostKills;
+
+      document.getElementById('birdWallCrashes').textContent = telemetry.birdWallCrashes; // @added
+      document.getElementById('predWallCrashes').textContent = telemetry.predWallCrashes; // @added
+      document.getElementById('avgWallDist').textContent = telemetry.avgWallDist.toFixed(0); // @added
+      document.getElementById('twigDeliveriesStat').textContent = telemetry.twigDeliveries; // @added
+      document.getElementById('idleBreaksStat').textContent = telemetry.idleBreaks; // @added
+      document.getElementById('birdStateEvade').textContent = (telemetry.birdStateTime.EVADE / 60).toFixed(1) + 's'; // @added
+      document.getElementById('birdStateTwig').textContent = (telemetry.birdStateTime.COLLECT_TWIG / 60).toFixed(1) + 's'; // @added
+      document.getElementById('birdStateForage').textContent = (telemetry.birdStateTime.FORAGE / 60).toFixed(1) + 's'; // @added
+      document.getElementById('birdStateReturn').textContent = (telemetry.birdStateTime.RETURN_HOME / 60).toFixed(1) + 's'; // @added
+      document.getElementById('predStateSearch').textContent = (telemetry.predStateTime.SEARCH / 60).toFixed(1) + 's'; // @added
+      document.getElementById('predStateChase').textContent = (telemetry.predStateTime.CHASE / 60).toFixed(1) + 's'; // @added
+      document.getElementById('predStateFlank').textContent = (telemetry.predStateTime.FLANK / 60).toFixed(1) + 's'; // @added
+      document.getElementById('predStateAmbush').textContent = (telemetry.predStateTime.AMBUSH / 60).toFixed(1) + 's'; // @added
+      document.getElementById('predStateRetreat').textContent = (telemetry.predStateTime.RETREAT / 60).toFixed(1) + 's'; // @added
+      document.getElementById('predStateNest').textContent = (telemetry.predStateTime.NEST / 60).toFixed(1) + 's'; // @added
     }
     
     function step() {
@@ -2798,7 +3359,15 @@
       twigPile = []; // NYTT
       birdNest = null; // NYTT
       grassBlades = [];
-      
+
+      telemetry.birdWallCrashes = 0; // @added
+      telemetry.predWallCrashes = 0; // @added
+      telemetry.twigDeliveries = 0; // @added
+      telemetry.idleBreaks = 0; // @added
+      telemetry.avgWallDist = 0; // @added
+      Object.keys(telemetry.birdStateTime).forEach(k => telemetry.birdStateTime[k] = 0); // @added
+      Object.keys(telemetry.predStateTime).forEach(k => telemetry.predStateTime[k] = 0); // @added
+
       initEnvironment();
       initBirds();
       initPredators();
