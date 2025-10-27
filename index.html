@@ -175,12 +175,11 @@
             <span class="chip" id="uiFoodRate">8</span>
           </div>
           <div class="control">
-            <label>🛡️ Bird Safe Zones</label>
-            <input type="range" id="hideSpots" min="3" max="15" value="6">
-            <span class="chip ok" id="uiHideSpots">6</span>
+            <label>🪺 Bird Nests</label>
+            <span class="chip ok" id="uiHideSpots">1 per sida</span>
           </div>
           <div class="control">
-            <label>👥 Capacity per Safe Zone</label>
+            <label>👥 Kapacitet per bo</label>
             <input type="range" id="hideCapacity" min="1" max="8" value="3">
             <span class="chip" id="uiHideCapacity">3</span>
           </div>
@@ -688,7 +687,7 @@
     let BIRD_COUNT = 30;
     let PRED_COUNT = 0;
     let FOOD_SPAWN_RATE = 8;
-    let HIDE_SPOT_COUNT = 6;
+    const HIDE_SPOT_COUNT = 2;
     let HIDE_CAPACITY = 3;
     let PRED_SAFE_ZONE_COUNT = 2;
     let TREE_COUNT = 0; // NEW
@@ -1275,6 +1274,11 @@
       treeCountDisplay.textContent = custom ? `${value} (custom)` : `${value}`;
     };
     setTreeCountDisplay(TREE_COUNT);
+
+    const hideSpotSummary = document.getElementById('uiHideSpots');
+    if (hideSpotSummary) {
+      hideSpotSummary.textContent = '1 per sida';
+    }
     
     // Basic settings
     document.getElementById('birdCount').addEventListener('change', e => {
@@ -1311,12 +1315,6 @@
     document.getElementById('foodRate').addEventListener('input', e => {
       FOOD_SPAWN_RATE = parseInt(e.target.value);
       document.getElementById('uiFoodRate').textContent = FOOD_SPAWN_RATE;
-    });
-    
-    document.getElementById('hideSpots').addEventListener('input', e => {
-      HIDE_SPOT_COUNT = parseInt(e.target.value);
-      document.getElementById('uiHideSpots').textContent = HIDE_SPOT_COUNT;
-      ensureHideSpotCount(HIDE_SPOT_COUNT);
     });
     
     document.getElementById('hideCapacity').addEventListener('input', e => {
@@ -2116,6 +2114,36 @@
         ctx.save();
         ctx.translate(this.centerX, this.centerY);
         ctx.rotate(this.angle);
+
+        const trunkBottom = this.halfHeight;
+        const canopyBase = this.canopyOffsetY + this.canopyRadius * 0.7;
+        let trunkTop = Math.min(canopyBase - this.ringLineWidth * 0.5, trunkBottom - 20);
+        let trunkHeight = trunkBottom - trunkTop;
+        if (trunkHeight < 20) {
+          trunkHeight = 20;
+          trunkTop = trunkBottom - trunkHeight;
+        }
+
+        const trunkWidth = Math.max(12, this.width * 0.28);
+        ctx.fillStyle = this.trunkColor;
+        ctx.strokeStyle = 'rgba(35, 24, 16, 0.55)';
+        ctx.lineWidth = Math.max(2, trunkWidth * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(-trunkWidth / 2, trunkTop);
+        ctx.lineTo(trunkWidth / 2, trunkTop);
+        ctx.lineTo(trunkWidth / 2, trunkBottom);
+        ctx.lineTo(-trunkWidth / 2, trunkBottom);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = Math.max(1.5, trunkWidth * 0.08);
+        ctx.beginPath();
+        ctx.moveTo(-trunkWidth * 0.18, trunkTop + trunkHeight * 0.12);
+        ctx.lineTo(-trunkWidth * 0.18, trunkBottom - trunkHeight * 0.12);
+        ctx.stroke();
 
         ctx.save();
         ctx.translate(0, this.canopyOffsetY);
