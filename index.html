@@ -35,9 +35,13 @@
       background:linear-gradient(90deg, rgba(220,53,69,0.15), rgba(220,53,69,0.4));
       border-radius:999px; cursor:pointer; }
     .speed-value{ font-weight:900; font-size:18px; color:var(--danger); min-width:48px; text-align:right; }
-    .score-panel{ display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
-    .score-item{ text-align:center; padding:12px 20px; background:rgba(255,255,255,0.5); 
+    .score-panel{ display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; flex:1; }
+    .score-group{ display:flex; flex-wrap:wrap; gap:16px; min-width:260px; }
+    .score-group-label{ font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.6px; width:100%; }
+    .record-group .score-group-label{ color:#6d28d9; }
+    .score-item{ text-align:center; padding:12px 20px; background:rgba(255,255,255,0.5);
       border-radius:12px; border:2px solid rgba(0,0,0,0.1); }
+    .score-item.record{ background:rgba(255,255,255,0.65); border-color:rgba(109,40,217,0.2); }
     .score-label{ font-size:12px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:0.5px; }
     .score-value{ font-size:28px; font-weight:900; margin-top:4px; }
     .score-value.ok{ color:#28a745; }
@@ -81,10 +85,6 @@
     .legend-line{ width:16px; height:8px; border-radius:4px; border:3px solid #333; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
     .legend-rect{ width:16px; height:16px; border-radius:4px; border:3px solid #333; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
 
-    .tip{ padding:12px 16px; background:#fff3cd; border:2px solid #ffc107; border-radius:10px; 
-      margin-top:12px; font-size:13px; font-weight:600; color:#856404; }
-    .tip.info{ background:#d1ecf1; border-color:#17a2b8; color:#0c5460; }
-    .tip.danger{ background:#f8d7da; border-color:#f5c6cb; color:#721c24; }
   </style>
 </head>
 <body>
@@ -104,25 +104,51 @@
         <span class="speed-value" id="speedDisplay">1×</span>
       </div>
       <div class="score-panel">
-        <div class="score-item">
-          <div class="score-label">Generation</div>
-          <div class="score-value ok" id="genValue">1</div>
+        <div class="score-group">
+          <div class="score-group-label">📈 Current</div>
+          <div class="score-item">
+            <div class="score-label">Generation</div>
+            <div class="score-value ok" id="genValue">1</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">Survival Time</div>
+            <div class="score-value" id="timeValue">0s</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">🐦 Birds Alive</div>
+            <div class="score-value ok" id="birdsAlive">0</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">💀 Deaths this Gen</div>
+            <div class="score-value danger" id="deadThisGen">0</div>
+          </div>
+          <div class="score-item">
+            <div class="score-label">⚔️ Fiendevinster</div>
+            <div class="score-value danger" id="enemyWins">0</div>
+          </div>
         </div>
-        <div class="score-item">
-          <div class="score-label">Survival Time</div>
-          <div class="score-value" id="timeValue">0s</div>
-        </div>
-        <div class="score-item">
-          <div class="score-label">🐦 Birds Alive</div>
-          <div class="score-value ok" id="birdsAlive">0</div>
-        </div>
-        <div class="score-item">
-          <div class="score-label">💀 Deaths this Gen</div>
-          <div class="score-value danger" id="deadThisGen">0</div>
-        </div>
-        <div class="score-item">
-          <div class="score-label">⚔️ Fiendevinster</div>
-          <div class="score-value danger" id="enemyWins">0</div>
+        <div class="score-group record-group">
+          <div class="score-group-label">🏆 Records</div>
+          <div class="score-item record">
+            <div class="score-label">⭐ Highest Fitness</div>
+            <div class="score-value" id="recordBestFitness">0</div>
+          </div>
+          <div class="score-item record">
+            <div class="score-label">⏱️ Longest Life (s)</div>
+            <div class="score-value" id="recordLongestLife">0s</div>
+          </div>
+          <div class="score-item record">
+            <div class="score-label">🪹 Largest Nest</div>
+            <div class="score-value" id="recordLargestBirdNest">0</div>
+          </div>
+          <div class="score-item record">
+            <div class="score-label">🔥 Largest Enemy Nest</div>
+            <div class="score-value" id="recordLargestEnemyNest">0</div>
+          </div>
+          <div class="score-item record">
+            <div class="score-label">💀 Most Birds Caught</div>
+            <div class="score-value" id="recordMostKills">0</div>
+          </div>
         </div>
       </div>
     </div>
@@ -137,23 +163,6 @@
       <div class="legend-item"><div class="legend-rect" style="background:#006400;"></div>Tree (Obstacle)</div>
       <div class="legend-item"><div class="legend-line" style="background:#D2691E;"></div>Twig</div>
       <div class="legend-item"><div class="legend-dot" style="background:#A0522D;"></div>Bird Nest</div>
-    </div>
-
-    <div class="tip info">
-      🌲 <strong>NEW GOAL:</strong> Both teams are racing to build their nests! Collect twigs from the central pile (or
-      steal from rivals) and deliver them to your side's birdhouse. Every twig grants a <strong>big fitness bonus!</strong>
-      Trees are obstacles that everyone must fly around or above.
-    </div>
-
-    <div class="tip danger">
-      ⚠️ <strong>SAFE ZONES:</strong> Birds can hide for a <strong>maximum of 3 seconds</strong> (180 frames),
-      then they MUST leave for a <strong>5 second cooldown</strong>.
-    </div>
-
-    <div class="tip info">
-      🦅 <strong>PREDATOR NESTS:</strong> Predators may only charge for about <strong>4 seconds</strong> before being
-      forced back into the hunt and must stay away for roughly <strong>3.5 seconds</strong> (adjustable below) before they
-      can recharge again.
     </div>
 
     <div class="section">
@@ -559,32 +568,6 @@
         <div class="stat-card">
           <div class="stat-label">🍎 Mat ute</div>
           <div class="stat-value" id="foodActive">0</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">🏆 Records</div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">⭐ Highest Fitness</div>
-          <div class="stat-value" id="recordBestFitness">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">⏱️ Longest Life (s)</div>
-          <div class="stat-value" id="recordLongestLife">0s</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">🪹 Largest Nest</div>
-          <div class="stat-value" id="recordLargestBirdNest">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">🔥 Largest Enemy Nest</div>
-          <div class="stat-value" id="recordLargestEnemyNest">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">💀 Most Birds Caught</div>
-          <div class="stat-value" id="recordMostKills">0</div>
         </div>
       </div>
     </div>
