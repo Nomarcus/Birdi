@@ -138,8 +138,8 @@
     </div>
 
     <div class="tip info">
-      🌲 <strong>NEW GOAL:</strong> The birds must now build a nest! Collect twigs from the pile in the middle of the
-      arena and carry them to the nest in the upper left. Every twig grants a <strong>big fitness bonus!</strong>
+      🌲 <strong>NEW GOAL:</strong> Both teams are racing to build their nests! Collect twigs from the central pile (or
+      steal from rivals) and deliver them to your side's birdhouse. Every twig grants a <strong>big fitness bonus!</strong>
       Trees are obstacles that everyone must fly around or above.
     </div>
 
@@ -494,6 +494,11 @@
           <div class="bar"><div id="twigBar"></div></div>
         </div>
         <div class="stat-card">
+          <div class="stat-label">🔥 Enemy Twigs</div>
+          <div class="stat-value" id="enemyTwigsInNest">0</div>
+          <div class="bar"><div id="enemyTwigBar"></div></div>
+        </div>
+        <div class="stat-card">
           <div class="stat-label">💀 Total Dead</div>
           <div class="stat-value" id="totalEaten">0</div>
         </div>
@@ -525,7 +530,11 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">🪹 Largest Nest</div>
-          <div class="stat-value" id="recordLargestNest">0</div>
+          <div class="stat-value" id="recordLargestBirdNest">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🔥 Largest Enemy Nest</div>
+          <div class="stat-value" id="recordLargestEnemyNest">0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">💀 Most Birds Caught</div>
@@ -550,8 +559,12 @@
           <div class="stat-value" id="avgWallDist">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">🪵 Twig Deliveries</div>
+          <div class="stat-label">🪵 Bird Twig Deliveries</div>
           <div class="stat-value" id="twigDeliveriesStat">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">🔥 Enemy Twig Deliveries</div>
+          <div class="stat-value" id="enemyTwigDeliveriesStat">0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">🎲 Idle Breaks</div>
@@ -641,6 +654,7 @@
     const TWIG_IDLE_PENALTY = 2;
     const TWIG_IDLE_INTERVAL = 45;
     const TWIG_DEATH_RATIO = 0.3;
+    const TWIG_STEAL_RANGE = 35;
 
     const MATING_DISTANCE = 20;
     const MATING_REQUIRED_FRAMES = 180; // 3 seconds at 60fps
@@ -730,6 +744,7 @@
     let totalEaten = 0;
     let deadThisGen = 0;
     let twigsInNest = 0; // NYTT
+    let enemyTwigsInNest = 0;
     
     let birds = [];
     let birdIdCounter = 0;
@@ -742,11 +757,13 @@
     let trees = []; // NYTT
     let twigPile = []; // NYTT
     let birdNest = null; // NYTT
+    let enemyNest = null;
     let grassBlades = [];
 
     let recordBestFitness = 0;
     let recordLongestLife = 0;
-    let recordLargestNest = 0;
+    let recordLargestBirdNest = 0;
+    let recordLargestEnemyNest = 0;
     let recordMostKills = 0;
 
     let enemyWinCount = 0;
@@ -758,6 +775,7 @@
       birdWallCrashes: 0, // @added
       predWallCrashes: 0, // @added
       twigDeliveries: 0, // @added
+      enemyTwigDeliveries: 0,
       birdStateTime: { EVADE: 0, COLLECT_TWIG: 0, FORAGE: 0, RETURN_HOME: 0 }, // @added
       predStateTime: { SEARCH: 0, CHASE: 0, FLANK: 0, AMBUSH: 0, RETREAT: 0, NEST: 0 }, // @added
       idleBreaks: 0, // @added
@@ -769,6 +787,8 @@
     const GROUND_Y = canvas.height - 50;
     const NEST_X = 140;
     const NEST_Y = GROUND_Y - 140;
+    const ENEMY_NEST_X = canvas.width - 140;
+    const ENEMY_NEST_Y = GROUND_Y - 140;
     let TWIG_PILE_X = canvas.width / 2;
     let TWIG_PILE_Y = GROUND_Y - 10;
 
@@ -1434,16 +1454,24 @@
     
     // NEW: Bird nest class
     class BirdNest {
-      constructor(x, y) {
+      constructor(x, y, options = {}) {
         this.x = x;
         this.y = y;
-        this.radius = 60;
+        this.radius = options.radius || 60;
         this.twigs = 0;
         this.twigData = [];
+        this.badgeGradient = options.badgeGradient || ['#3b82f6', '#2563eb'];
+        this.badgeStroke = options.badgeStroke || 'rgba(21, 101, 192, 0.8)';
+        this.twigStroke = options.twigStroke || '#8a5a35';
+        this.badgeTextColor = options.badgeTextColor || '#fff';
+        this.spriteFilter = options.spriteFilter || null;
+        this.recordUpdater = typeof options.recordUpdater === 'function'
+          ? options.recordUpdater
+          : (value => { recordLargestBirdNest = Math.max(recordLargestBirdNest, value); });
       }
       addTwig() {
         this.twigs++;
-        recordLargestNest = Math.max(recordLargestNest, this.twigs);
+        this.recordUpdater(this.twigs);
         this.twigData.push({
           offset: (Math.random() - 0.5) * 0.8,
           angle: (Math.random() - 0.5) * 0.6,
@@ -1462,7 +1490,12 @@
         let effectiveWidth;
 
         if (birdhouseReady) {
+          ctx.save();
+          if (this.spriteFilter) {
+            ctx.filter = this.spriteFilter;
+          }
           ctx.drawImage(birdhouseSprite, spriteX, spriteY, spriteWidth, spriteHeight);
+          ctx.restore();
           overlayCenterY = spriteY + spriteHeight * 0.72;
           badgeBaseY = spriteY + spriteHeight;
           effectiveWidth = spriteWidth;
@@ -1558,7 +1591,7 @@
           ctx.save();
           ctx.translate(twig.offset * twigWidth, 0);
           ctx.rotate(twig.angle);
-          ctx.strokeStyle = '#8a5a35';
+          ctx.strokeStyle = this.twigStroke;
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.moveTo(-twig.length / 2, 0);
@@ -1573,8 +1606,8 @@
         const badgeX = this.x - badgeWidth / 2;
         const badgeY = badgeBaseY;
         const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeHeight);
-        badgeGrad.addColorStop(0, '#3b82f6');
-        badgeGrad.addColorStop(1, '#2563eb');
+        badgeGrad.addColorStop(0, this.badgeGradient[0]);
+        badgeGrad.addColorStop(1, this.badgeGradient[1] ?? this.badgeGradient[0]);
         const drawBadgePath = () => {
           const r = 12;
           ctx.beginPath();
@@ -1590,12 +1623,12 @@
         ctx.fillStyle = badgeGrad;
         drawBadgePath();
         ctx.fill();
-        ctx.strokeStyle = 'rgba(21, 101, 192, 0.8)';
+        ctx.strokeStyle = this.badgeStroke;
         ctx.lineWidth = 3;
         drawBadgePath();
         ctx.stroke();
 
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = this.badgeTextColor;
         ctx.font = 'bold 20px "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1752,6 +1785,9 @@
         
         // NEW: Distance to nest
         const nestDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
+        const distToEnemyNest = enemyNest
+          ? Math.hypot(this.x - enemyNest.x, this.y - enemyNest.y)
+          : Infinity;
         
         let nearbyBirds = 0;
         for (const b of birds) {
@@ -1830,6 +1866,77 @@
         const flankRay = this.rayValues[3]; // @added
         const rearLeftRay = this.rayValues[4]; // @added
         const backRay = this.rayValues[5]; // @added
+
+        if (this.hasTwig) {
+          if (!enemyNest) {
+            if (this.hasTwig) this.hasTwig.carriedBy = null;
+            this.hasTwig = null;
+            this.twigLastDist = null;
+            this.twigCarryTime = 0;
+          } else {
+            const distToHouse = distToEnemyNest;
+            if (this.twigLastDist === null) {
+              this.twigLastDist = distToHouse;
+            } else {
+              const progress = this.twigLastDist - distToHouse;
+              if (progress > 0) {
+                this.fitness += progress * TWIG_PROGRESS_FACTOR;
+              } else if (progress < 0) {
+                this.fitness += progress * TWIG_BACKTRACK_FACTOR;
+              }
+            }
+            this.twigCarryTime++;
+            if (this.twigCarryTime > 0 && this.twigCarryTime % TWIG_IDLE_INTERVAL === 0) {
+              this.fitness -= TWIG_IDLE_PENALTY;
+            }
+            this.twigLastDist = distToHouse;
+            if (enemyNest && distToHouse < enemyNest.radius + 20) {
+              enemyNest.addTwig();
+              if (this.hasTwig) this.hasTwig.carriedBy = null;
+              twigPile = twigPile.filter(t => t !== this.hasTwig);
+              this.hasTwig = null;
+              this.twigLastDist = null;
+              this.twigCarryTime = 0;
+              this.fitness += TWIG_FITNESS_BONUS;
+              enemyTwigsInNest++;
+              recordLargestEnemyNest = Math.max(recordLargestEnemyNest, enemyTwigsInNest);
+              telemetry.enemyTwigDeliveries += 1;
+            }
+            target = null;
+            minDist = Infinity;
+          }
+        } else {
+          let stoleTwig = false;
+          for (const bird of birds) {
+            if (!bird.alive || bird.hiding || !bird.hasTwig) continue;
+            const d = Math.hypot(this.x - bird.x, this.y - bird.y);
+            if (d < TWIG_STEAL_RANGE) {
+              const twig = bird.hasTwig;
+              twig.carriedBy = this;
+              bird.hasTwig = null;
+              bird.twigLastDist = null;
+              bird.twigCarryTime = 0;
+              this.hasTwig = twig;
+              this.twigLastDist = isFinite(distToEnemyNest) ? distToEnemyNest : null;
+              this.twigCarryTime = 0;
+              this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
+              stoleTwig = true;
+              break;
+            }
+          }
+          if (!stoleTwig) {
+            for (const t of twigPile) {
+              if (!t.carriedBy && Math.hypot(this.x - t.x, this.y - t.y) < 35) {
+                this.hasTwig = t;
+                t.carriedBy = this;
+                this.twigLastDist = isFinite(distToEnemyNest) ? distToEnemyNest : null;
+                this.twigCarryTime = 0;
+                this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
+                break;
+              }
+            }
+          }
+        }
 
         const inputs = [
           this.x / canvas.width,
@@ -2060,21 +2167,41 @@
             this.twigCarryTime = 0;
             this.fitness += TWIG_FITNESS_BONUS;
             twigsInNest++;
-            recordLargestNest = Math.max(recordLargestNest, twigsInNest);
+            recordLargestBirdNest = Math.max(recordLargestBirdNest, twigsInNest);
             telemetry.twigDeliveries += 1; // @added
             this.fitness += k_b2; // @added
             this.prevProgress = null; // @added
           }
         } else if (!this.hasTwig) {
-          // Always pick up a twig when entering the pile
-          for (const t of twigPile) {
-            if (!t.carriedBy && Math.hypot(this.x - t.x, this.y - t.y) < 35) {
-              this.hasTwig = t;
-              t.carriedBy = this;
+          let stoleTwig = false;
+          for (const pred of predators) {
+            if (!pred.alive || pred.inNest || !pred.hasTwig) continue;
+            const d = Math.hypot(this.x - pred.x, this.y - pred.y);
+            if (d < TWIG_STEAL_RANGE) {
+              this.hasTwig = pred.hasTwig;
+              this.hasTwig.carriedBy = this;
+              pred.hasTwig = null;
+              pred.twigLastDist = null;
+              pred.twigCarryTime = 0;
               this.twigLastDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
               this.twigCarryTime = 0;
               this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
+              stoleTwig = true;
               break;
+            }
+          }
+
+          if (!stoleTwig) {
+            // Always pick up a twig when entering the pile
+            for (const t of twigPile) {
+              if (!t.carriedBy && Math.hypot(this.x - t.x, this.y - t.y) < 35) {
+                this.hasTwig = t;
+                t.carriedBy = this;
+                this.twigLastDist = Math.hypot(this.x - birdNest.x, this.y - birdNest.y);
+                this.twigCarryTime = 0;
+                this.fitness += TWIG_FITNESS_BONUS * TWIG_PICKUP_RATIO;
+                break;
+              }
             }
           }
         }
@@ -2434,6 +2561,9 @@
         this.attractY = 0; // @added
         this.idleTimer = 0; // @added
         this.lastIdlePos = { x: this.x, y: this.y }; // @added
+        this.hasTwig = null;
+        this.twigLastDist = null;
+        this.twigCarryTime = 0;
       }
       enterNest() {
         this.inNest = true;
@@ -2547,6 +2677,7 @@
 
         const distToNest = Math.hypot(this.x - this.homeNest.x, this.y - this.homeNest.y);
         const previousNestDist = this.prevNestDist ?? distToNest;
+        const distToEnemyNest = enemyNest ? Math.hypot(this.x - enemyNest.x, this.y - enemyNest.y) : Infinity;
 
         const headingMag = Math.hypot(this.vx, this.vy);
         let dirX = this.vx;
@@ -2588,13 +2719,17 @@
           packMates,
           distToNest,
           forcedReturn: this.forcedReturn > 0,
-          energy: this.energy
+          energy: this.energy,
+          carryingTwig: !!this.hasTwig,
+          distToEnemyNest
         }); // @added
         const attraction = this.computePredAttraction({ // @added
           target,
           minDist,
           packMates,
           distToNest,
+          distToEnemyNest,
+          carryingTwig: !!this.hasTwig,
           aimAngle
         }); // @added
         this.attractX = attraction.x; // @added
@@ -2677,10 +2812,18 @@
         const steerY = moveY * MIX_OUTPUT + this.avoidY + this.attractY; // @added
         this.vx += steerX; // @changed
         this.vy += steerY; // @changed
+        if (this.hasTwig && enemyNest) {
+          const dxTwig = enemyNest.x - this.x;
+          const dyTwig = enemyNest.y - this.y;
+          const distTwig = Math.hypot(dxTwig, dyTwig) || 1;
+          this.vx += (dxTwig / distTwig) * 0.5;
+          this.vy += (dyTwig / distTwig) * 0.5;
+        }
         this.vx *= 0.96;
         this.vy *= 0.96;
         
-        const maxSpeed = PRED_SPEED * evolutionBonus * packBonus;
+        const carryPenalty = this.hasTwig ? 0.75 : 1;
+        const maxSpeed = PRED_SPEED * evolutionBonus * packBonus * carryPenalty;
         const speed = Math.hypot(this.vx, this.vy);
         if (speed > maxSpeed) {
           this.vx = (this.vx / speed) * maxSpeed;
@@ -2809,9 +2952,11 @@
           if (d < 18) {
             b.alive = false;
             b.trail = [];
+            let fallenTwig = null;
             if (b.hasTwig) { // Drop twig on death
               b.fitness = Math.max(0, b.fitness - TWIG_FITNESS_BONUS * TWIG_DEATH_RATIO);
-              b.hasTwig.carriedBy = null;
+              fallenTwig = b.hasTwig;
+              fallenTwig.carriedBy = null;
               b.hasTwig = null;
               b.twigLastDist = null;
               b.twigCarryTime = 0;
@@ -2822,6 +2967,13 @@
             recordMostKills = Math.max(recordMostKills, this.kills);
             totalEaten++;
             deadThisGen++;
+
+            if (!this.hasTwig && fallenTwig) {
+              this.hasTwig = fallenTwig;
+              fallenTwig.carriedBy = this;
+              this.twigLastDist = enemyNest ? Math.hypot(this.x - enemyNest.x, this.y - enemyNest.y) : null;
+              this.twigCarryTime = 0;
+            }
             
             if (PRED_EVOLVE) {
               this.huntBonus += 0.05;
@@ -2858,7 +3010,9 @@
         } // @added
         this.stateTime++; // @added
         let desired = this.state; // @added
-        if (ctx.forcedReturn || ctx.energy < this.maxEnergy * 0.3) { // @added
+        if (ctx.carryingTwig) { // @added
+          desired = 'RETREAT'; // @added
+        } else if (ctx.forcedReturn || ctx.energy < this.maxEnergy * 0.3) { // @added
           desired = 'RETREAT'; // @added
         } else if (ctx.target && ctx.minDist < 160) { // @added
           desired = 'CHASE'; // @added
@@ -2869,7 +3023,7 @@
         } else { // @added
           desired = 'SEARCH'; // @added
         } // @added
-        if (this.state === 'RETREAT' && !ctx.forcedReturn && ctx.energy > this.maxEnergy * 0.55) { // @added
+        if (this.state === 'RETREAT' && !ctx.forcedReturn && !ctx.carryingTwig && ctx.energy > this.maxEnergy * 0.55) { // @added
           desired = ctx.target ? 'CHASE' : 'SEARCH'; // @added
         } // @added
         if (desired !== this.state && this.stateLock === 0) { // @added
@@ -2882,7 +3036,13 @@
       computePredAttraction(ctx) { // @added
         let ax = 0; // @added
         let ay = 0; // @added
-        if (this.state === 'RETREAT') { // @added
+        if (ctx.carryingTwig && enemyNest) { // @added
+          const dx = enemyNest.x - this.x; // @added
+          const dy = enemyNest.y - this.y; // @added
+          const dist = Math.hypot(dx, dy) || 1; // @added
+          ax += (dx / dist) * 1.4; // @added
+          ay += (dy / dist) * 1.4; // @added
+        } else if (this.state === 'RETREAT') { // @added
           const dx = this.homeNest.x - this.x; // @added
           const dy = this.homeNest.y - this.y; // @added
           const dist = Math.hypot(dx, dy) || 1; // @added
@@ -2935,6 +3095,12 @@
         this.wallCrashTimer = 0;
         this.cornerStall = 0;
         this.nestCooldown = 0;
+        if (this.hasTwig) {
+          this.hasTwig.carriedBy = null;
+          this.hasTwig = null;
+          this.twigLastDist = null;
+          this.twigCarryTime = 0;
+        }
         for (let i = 0; i < 20; i++) {
           particles.push(new Particle(this.x, this.y, '#9C27B0'));
         }
@@ -3047,7 +3213,16 @@
         ctx.beginPath();
         ctx.arc(12, -4, 1, 0, Math.PI * 2);
         ctx.fill();
-        
+
+        if (this.hasTwig) {
+          ctx.strokeStyle = '#b45309';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(14, -2);
+          ctx.lineTo(28, 0);
+          ctx.stroke();
+        }
+
         const ep = clamp(this.energy / this.maxEnergy);
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.fillRect(-9, -18, 18, 3);
@@ -3122,9 +3297,23 @@
       }
       
       // NYTT: Init Bo & Kvistar
-      birdNest = new BirdNest(NEST_X, NEST_Y); // Bottom left
+      birdNest = new BirdNest(NEST_X, NEST_Y, {
+        recordUpdater: value => {
+          recordLargestBirdNest = Math.max(recordLargestBirdNest, value);
+        }
+      });
+      enemyNest = new BirdNest(ENEMY_NEST_X, ENEMY_NEST_Y, {
+        badgeGradient: ['#f97316', '#ea580c'],
+        badgeStroke: 'rgba(194, 65, 12, 0.85)',
+        twigStroke: '#b45309',
+        spriteFilter: 'hue-rotate(-35deg) saturate(1.35)',
+        recordUpdater: value => {
+          recordLargestEnemyNest = Math.max(recordLargestEnemyNest, value);
+        }
+      });
       regenerateTwigPile();
       twigsInNest = 0;
+      enemyTwigsInNest = 0;
 
       grassBlades = [];
       for (let x = 0; x < canvas.width; x += 6) {
@@ -3256,9 +3445,23 @@
       matingTimers.clear();
 
       // Reset the nest for the next generation
-      birdNest = new BirdNest(NEST_X, NEST_Y);
+      birdNest = new BirdNest(NEST_X, NEST_Y, {
+        recordUpdater: value => {
+          recordLargestBirdNest = Math.max(recordLargestBirdNest, value);
+        }
+      });
+      enemyNest = new BirdNest(ENEMY_NEST_X, ENEMY_NEST_Y, {
+        badgeGradient: ['#f97316', '#ea580c'],
+        badgeStroke: 'rgba(194, 65, 12, 0.85)',
+        twigStroke: '#b45309',
+        spriteFilter: 'hue-rotate(-35deg) saturate(1.35)',
+        recordUpdater: value => {
+          recordLargestEnemyNest = Math.max(recordLargestEnemyNest, value);
+        }
+      });
       regenerateTwigPile();
       twigsInNest = 0;
+      enemyTwigsInNest = 0;
 
       seedInitialFood();
     }
@@ -3294,16 +3497,20 @@
       // NEW: HUD for twigs
       document.getElementById('twigsInNest').textContent = twigsInNest;
       document.getElementById('twigBar').style.width = (twigsInNest / TWIG_PILE_COUNT * 100) + '%';
+      document.getElementById('enemyTwigsInNest').textContent = enemyTwigsInNest;
+      document.getElementById('enemyTwigBar').style.width = (enemyTwigsInNest / TWIG_PILE_COUNT * 100) + '%';
 
       document.getElementById('recordBestFitness').textContent = Math.round(recordBestFitness);
       document.getElementById('recordLongestLife').textContent = (recordLongestLife / 60).toFixed(1) + 's';
-      document.getElementById('recordLargestNest').textContent = recordLargestNest;
+      document.getElementById('recordLargestBirdNest').textContent = recordLargestBirdNest;
+      document.getElementById('recordLargestEnemyNest').textContent = recordLargestEnemyNest;
       document.getElementById('recordMostKills').textContent = recordMostKills;
 
       document.getElementById('birdWallCrashes').textContent = telemetry.birdWallCrashes; // @added
       document.getElementById('predWallCrashes').textContent = telemetry.predWallCrashes; // @added
       document.getElementById('avgWallDist').textContent = telemetry.avgWallDist.toFixed(0); // @added
       document.getElementById('twigDeliveriesStat').textContent = telemetry.twigDeliveries; // @added
+      document.getElementById('enemyTwigDeliveriesStat').textContent = telemetry.enemyTwigDeliveries;
       document.getElementById('idleBreaksStat').textContent = telemetry.idleBreaks; // @added
       document.getElementById('birdStateEvade').textContent = (telemetry.birdStateTime.EVADE / 60).toFixed(1) + 's'; // @added
       document.getElementById('birdStateTwig').textContent = (telemetry.birdStateTime.COLLECT_TWIG / 60).toFixed(1) + 's'; // @added
@@ -3473,6 +3680,7 @@
       predNests.forEach(n => n.draw());
       
       if (birdNest) birdNest.draw(); // NYTT
+      if (enemyNest) enemyNest.draw();
       trees.forEach(t => t.draw()); // NYTT
       
       // Draw twigs that are not carried
@@ -3512,6 +3720,8 @@
       trees = []; // NYTT
       twigPile = []; // NYTT
       birdNest = null; // NYTT
+      enemyNest = null;
+      enemyTwigsInNest = 0;
       grassBlades = [];
       enemyWinCount = 0;
       enemyWinAwarded = false;
@@ -3521,6 +3731,7 @@
       telemetry.birdWallCrashes = 0; // @added
       telemetry.predWallCrashes = 0; // @added
       telemetry.twigDeliveries = 0; // @added
+      telemetry.enemyTwigDeliveries = 0;
       telemetry.idleBreaks = 0; // @added
       telemetry.avgWallDist = 0; // @added
       Object.keys(telemetry.birdStateTime).forEach(k => telemetry.birdStateTime[k] = 0); // @added
