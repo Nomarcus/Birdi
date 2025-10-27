@@ -156,11 +156,11 @@
         <div class="grid">
           <div class="control">
             <label>🐦 Total Small Birds</label>
-            <input type="number" id="birdCount" value="30" min="9" max="90" step="3">
+            <input type="number" id="birdCount" value="30" min="9" max="500">
           </div>
           <div class="control">
             <label>🦅 Predator Count</label>
-            <input type="range" id="predCount" min="0" max="8" value="0">
+            <input type="range" id="predCount" min="0" max="500" value="0">
             <span class="chip danger" id="uiPredCount">0</span>
           </div>
           <div class="control">
@@ -575,6 +575,19 @@
       THINKER: { color: '#4CAF50', speed: 0.9, vision: 1.6, stamina: 1.2, name: 'Thinker' },
       FLOCKER: { color: '#2196F3', speed: 1.1, vision: 1.1, stamina: 1.0, name: 'Flocker' }
     };
+
+    const BIRD_TYPE_KEYS = Object.keys(BIRD_TYPES);
+    const getBirdTypeAllocations = total => {
+      const typeCount = BIRD_TYPE_KEYS.length;
+      const base = Math.floor(total / typeCount);
+      let remainder = total % typeCount;
+      return BIRD_TYPE_KEYS.reduce((acc, type) => {
+        const extra = remainder > 0 ? 1 : 0;
+        acc[type] = base + extra;
+        if (remainder > 0) remainder--;
+        return acc;
+      }, {});
+    };
     
     // Collapsible sections
     document.querySelectorAll('.collapsible').forEach(el => {
@@ -602,9 +615,8 @@
     
     // Basic settings
     document.getElementById('birdCount').addEventListener('change', e => {
-      let v = parseInt(e.target.value);
-      v = Math.floor(v / 3) * 3;
-      BIRD_COUNT = Math.max(9, Math.min(90, v));
+      const v = parseInt(e.target.value);
+      BIRD_COUNT = Math.max(9, Math.min(500, isNaN(v) ? BIRD_COUNT : v));
       e.target.value = BIRD_COUNT;
     });
     
@@ -2428,14 +2440,16 @@
     
     function initBirds() {
       birds = [];
-      const perType = BIRD_COUNT / 3;
-      
-      // Brain now created with the correct number of inputs/outputs in the constructor
-      for (let i = 0; i < perType; i++) birds.push(new Bird('SCOUT'));
-      for (let i = 0; i < perType; i++) birds.push(new Bird('THINKER'));
-      for (let i = 0; i < perType; i++) birds.push(new Bird('FLOCKER'));
+      const allocations = getBirdTypeAllocations(BIRD_COUNT);
+
+      BIRD_TYPE_KEYS.forEach(type => {
+        const target = allocations[type];
+        for (let i = 0; i < target; i++) {
+          birds.push(new Bird(type));
+        }
+      });
     }
-    
+
     function initPredators() {
       predators = [];
       for (let i = 0; i < PRED_COUNT; i++) {
@@ -2460,22 +2474,26 @@
     }
     
     function evolveBirds() {
-      const types = ['SCOUT', 'THINKER', 'FLOCKER'];
       const newBirds = [];
-      
-      for (const type of types) {
+      const allocations = getBirdTypeAllocations(BIRD_COUNT);
+
+      for (const type of BIRD_TYPE_KEYS) {
         const typeBirds = birds.filter(b => b.type === type);
         typeBirds.sort((a, b) => b.fitness - a.fitness);
-        
-        const perType = BIRD_COUNT / 3;
-        const eliteCount = Math.max(1, Math.floor(perType * BIRD_ELITE_RATE));
-        
+
+        const targetCount = allocations[type];
+        if (targetCount === 0) {
+          continue;
+        }
+        const eliteCount = Math.max(1, Math.floor(targetCount * BIRD_ELITE_RATE));
+
         for (let i = 0; i < eliteCount && i < typeBirds.length; i++) {
           newBirds.push(new Bird(type, typeBirds[i].brain.copy()));
         }
-        
-        const poolSize = Math.max(eliteCount, Math.floor(perType * BIRD_PARENT_POOL));
-        while (newBirds.filter(b => b.type === type).length < perType) {
+
+        const poolSize = Math.max(eliteCount, Math.floor(targetCount * BIRD_PARENT_POOL));
+        let currentCount = newBirds.filter(b => b.type === type).length;
+        while (currentCount < targetCount) {
           const parent = typeBirds[Math.floor(Math.random() * Math.min(typeBirds.length, poolSize))];
           if (parent) {
             const childBrain = parent.brain.copy();
@@ -2484,6 +2502,7 @@
           } else {
             newBirds.push(new Bird(type)); // Creates new brain
           }
+          currentCount++;
         }
       }
       
@@ -2559,15 +2578,18 @@
       const scouts = birds.filter(b => b.type === 'SCOUT' && b.alive).length;
       const thinkers = birds.filter(b => b.type === 'THINKER' && b.alive).length;
       const flockers = birds.filter(b => b.type === 'FLOCKER' && b.alive).length;
-      const perType = BIRD_COUNT / 3;
-      
+      const allocations = getBirdTypeAllocations(BIRD_COUNT);
+      const perTypeScout = allocations.SCOUT || 1;
+      const perTypeThinker = allocations.THINKER || 1;
+      const perTypeFlocker = allocations.FLOCKER || 1;
+
       document.getElementById('scoutCount').textContent = scouts;
       document.getElementById('thinkerCount').textContent = thinkers;
       document.getElementById('flockerCount').textContent = flockers;
-      
-      document.getElementById('scoutBar').style.width = (scouts / perType * 100) + '%';
-      document.getElementById('thinkerBar').style.width = (thinkers / perType * 100) + '%';
-      document.getElementById('flockerBar').style.width = (flockers / perType * 100) + '%';
+
+      document.getElementById('scoutBar').style.width = (scouts / perTypeScout * 100) + '%';
+      document.getElementById('thinkerBar').style.width = (thinkers / perTypeThinker * 100) + '%';
+      document.getElementById('flockerBar').style.width = (flockers / perTypeFlocker * 100) + '%';
       
       document.getElementById('totalEaten').textContent = totalEaten;
       document.getElementById('birdsHiding').textContent = birds.filter(b => b.hiding).length;
