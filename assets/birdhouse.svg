@@ -1,59 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 760">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 260">
   <defs>
-    <linearGradient id="roofGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#e06464"/>
-      <stop offset="100%" stop-color="#b84444"/>
+    <linearGradient id="roof" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ff8a6f"/>
+      <stop offset="100%" stop-color="#d76043"/>
     </linearGradient>
-    <pattern id="roofTiles" width="36" height="36" patternUnits="userSpaceOnUse" patternTransform="skewX(-10)">
-      <rect width="36" height="36" fill="url(#roofGrad)"/>
-      <path d="M0 18h36" stroke="#9c2c2c" stroke-width="6" opacity="0.4"/>
-      <path d="M0 36l36-18" stroke="#912525" stroke-width="6" opacity="0.35"/>
-      <path d="M0 0l36 18" stroke="#ad3a3a" stroke-width="6" opacity="0.25"/>
-    </pattern>
-    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#9ad4e0"/>
-      <stop offset="100%" stop-color="#60a9c4"/>
+    <linearGradient id="wall" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fff7ec"/>
+      <stop offset="100%" stop-color="#e7d6bf"/>
     </linearGradient>
-    <radialGradient id="holeGrad" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="#1f1b16"/>
-      <stop offset="100%" stop-color="#0d0805"/>
-    </radialGradient>
-    <linearGradient id="perchGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#c78d54"/>
-      <stop offset="100%" stop-color="#9c6a3c"/>
+    <linearGradient id="post" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#d8b684"/>
+      <stop offset="100%" stop-color="#9d6f3d"/>
     </linearGradient>
   </defs>
-  <rect x="250" y="320" width="40" height="440" rx="18" fill="#c08a54" stroke="#9e6c3f" stroke-width="12"/>
-  <g transform="translate(270 330)">
-    <g fill="#4f8439" stroke="#3e6a2e" stroke-width="10" stroke-linecap="round">
-      <path d="M-170 120c-50 80 16 144 76 110 32-18 58-66 68-110"/>
-      <path d="M170 120c50 80-16 144-76 110-32-18-58-66-68-110"/>
-    </g>
-    <g fill="#c5564b" stroke="#a03a30" stroke-width="10">
-      <circle cx="-112" cy="172" r="22"/>
-      <circle cx="-72" cy="208" r="18"/>
-      <circle cx="112" cy="172" r="22"/>
-      <circle cx="72" cy="208" r="18"/>
-    </g>
-  </g>
-  <path d="M80 320 L270 140 L460 320 Z" fill="url(#roofTiles)" stroke="#7a2525" stroke-width="16" stroke-linejoin="round"/>
-  <rect x="120" y="280" width="300" height="260" rx="42" fill="url(#wallGrad)" stroke="#2f5d74" stroke-width="14"/>
-  <circle cx="270" cy="394" r="70" fill="url(#holeGrad)" stroke="#2b1a10" stroke-width="12"/>
-  <rect x="190" y="456" width="160" height="26" rx="13" fill="url(#perchGrad)" stroke="#84522a" stroke-width="12"/>
-  <rect x="320" y="468" width="30" height="30" rx="12" fill="#84522a" stroke="#633b1b" stroke-width="8"/>
-  <g transform="translate(150 340)">
-    <circle cx="48" cy="40" r="18" fill="#ffe59a" stroke="#f5c150" stroke-width="6"/>
-    <g stroke="#f1b544" stroke-width="6" stroke-linecap="round">
-      <line x1="48" y1="4" x2="48" y2="-24"/>
-      <line x1="48" y1="76" x2="48" y2="104"/>
-      <line x1="12" y1="40" x2="-16" y2="40"/>
-      <line x1="84" y1="40" x2="112" y2="40"/>
-      <line x1="18" y1="10" x2="-2" y2="-10"/>
-      <line x1="78" y1="70" x2="98" y2="90"/>
-      <line x1="78" y1="10" x2="98" y2="-10"/>
-      <line x1="18" y1="70" x2="-2" y2="90"/>
-    </g>
-    <path d="M128 28c24-12 48 12 44 34" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
-    <path d="M128 28c-20-6-40 8-38 26" fill="none" stroke="#d9f0ff" stroke-width="8" stroke-linecap="round"/>
+  <g fill="none" fill-rule="evenodd">
+    <ellipse cx="110" cy="244" rx="60" ry="12" fill="rgba(0,0,0,0.16)"/>
+    <rect x="98" y="180" width="24" height="64" rx="10" fill="url(#post)"/>
+    <path d="M40 96 L110 40 L180 96 Z" fill="url(#roof)" stroke="#c74f35" stroke-width="8" stroke-linejoin="round"/>
+    <rect x="56" y="96" width="108" height="108" rx="22" fill="url(#wall)" stroke="#ccb89d" stroke-width="6"/>
+    <rect x="76" y="120" width="68" height="16" rx="8" fill="rgba(255,255,255,0.55)"/>
+    <circle cx="110" cy="152" r="24" fill="#3f2a1c"/>
+    <circle cx="110" cy="152" r="10" fill="#f0d5ad"/>
+    <rect x="80" y="176" width="60" height="14" rx="7" fill="#dcb482" stroke="#ad7a42" stroke-width="4"/>
+    <rect x="138" y="170" width="10" height="26" rx="5" fill="#ad7a42"/>
   </g>
 </svg>
