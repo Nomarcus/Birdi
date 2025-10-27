@@ -119,6 +119,10 @@
           <div class="score-label">💀 Deaths this Gen</div>
           <div class="score-value danger" id="deadThisGen">0</div>
         </div>
+        <div class="score-item">
+          <div class="score-label">⚔️ Fiendevinster</div>
+          <div class="score-value danger" id="enemyWins">0</div>
+        </div>
       </div>
     </div>
 
@@ -638,6 +642,14 @@
     const TWIG_IDLE_INTERVAL = 45;
     const TWIG_DEATH_RATIO = 0.3;
 
+    const MATING_DISTANCE = 20;
+    const MATING_REQUIRED_FRAMES = 180; // 3 seconds at 60fps
+    const MATING_COOLDOWN_FRAMES = 360;
+    const MATING_FITNESS_BONUS = 3500;
+
+    const ENEMY_WIN_FITNESS = 8000;
+    const ENEMY_WIN_ENERGY_BONUS = 60;
+
     let RAY_RANGE = 220; // @added
     const RAY_ANGLES = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, Math.PI]; // @added
     let AVOID_GAIN_F = 1.2; // @added
@@ -720,6 +732,7 @@
     let twigsInNest = 0; // NYTT
     
     let birds = [];
+    let birdIdCounter = 0;
     let predators = [];
     let foodParticles = [];
     let hideSpots = [];
@@ -735,6 +748,11 @@
     let recordLongestLife = 0;
     let recordLargestNest = 0;
     let recordMostKills = 0;
+
+    let enemyWinCount = 0;
+    let enemyWinAwarded = false;
+
+    const matingTimers = new Map();
 
     const telemetry = { // @added
       birdWallCrashes: 0, // @added
@@ -1618,14 +1636,34 @@
         mut(this.wIH);
         mut(this.wHO);
       }
+      crossover(other, mix = 0.5) {
+        const child = new Brain(this.inputs, this.hidden, this.outputs);
+        const blend = (a, b) => typeof b === 'number' ? (a * mix + b * (1 - mix)) : a;
+        child.wIH = this.wIH.map((row, i) =>
+          row.map((val, j) => {
+            const otherRow = other && other.wIH ? other.wIH[i] : null;
+            const otherVal = otherRow ? otherRow[j] : undefined;
+            return blend(val, otherVal);
+          })
+        );
+        child.wHO = this.wHO.map((row, i) =>
+          row.map((val, j) => {
+            const otherRow = other && other.wHO ? other.wHO[i] : null;
+            const otherVal = otherRow ? otherRow[j] : undefined;
+            return blend(val, otherVal);
+          })
+        );
+        return child;
+      }
     }
-    
+
     class Bird {
       constructor(type, brain) {
         this.type = type;
         this.typeData = BIRD_TYPES[type];
         // UPDATED Brain: 43 inputs, 4 outputs // @changed
         this.brain = brain || new Brain(43, BIRD_HIDDEN, 4); // @changed
+        this.id = birdIdCounter++;
         this.reset();
       }
       reset() {
@@ -1665,6 +1703,7 @@
         this.attractY = 0; // @added
         this.rayValues = RAY_ANGLES.map(() => 1); // @added
         this.lastThreat = null; // @added
+        this.matingCooldown = 0;
       }
       think() {
         if (!this.alive || this.hiding) return;
@@ -1954,7 +1993,11 @@
           this.idleTimer = 0; // @added
           this.lastIdlePos = { x: this.x, y: this.y }; // @added
         } // @added
-        
+
+        if (this.matingCooldown > 0) {
+          this.matingCooldown--;
+        }
+
         // Cooldown counter
         if (this.hideCooldown > 0) {
           this.hideCooldown--;
@@ -3202,7 +3245,9 @@
       survivalTime = 0;
       foodParticles = [];
       deadThisGen = 0;
-      
+      enemyWinAwarded = false;
+      matingTimers.clear();
+
       // Reset the nest for the next generation
       birdNest = new BirdNest(NEST_X, NEST_Y);
       regenerateTwigPile();
@@ -3217,6 +3262,7 @@
       document.getElementById('birdsAlive').textContent = birds.filter(b => b.alive).length;
       document.getElementById('deadThisGen').textContent = deadThisGen;
       document.getElementById('predsCharging').textContent = predators.filter(p => p.alive && p.inNest).length;
+      document.getElementById('enemyWins').textContent = enemyWinCount;
       
       const scouts = birds.filter(b => b.type === 'SCOUT' && b.alive).length;
       const thinkers = birds.filter(b => b.type === 'THINKER' && b.alive).length;
@@ -3263,7 +3309,69 @@
       document.getElementById('predStateRetreat').textContent = (telemetry.predStateTime.RETREAT / 60).toFixed(1) + 's'; // @added
       document.getElementById('predStateNest').textContent = (telemetry.predStateTime.NEST / 60).toFixed(1) + 's'; // @added
     }
-    
+
+    function handleBirdMating() {
+      matingTimers.forEach((_, key) => {
+        const [idA, idB] = key.split('-').map(Number);
+        const birdA = birds.find(b => b.id === idA);
+        const birdB = birds.find(b => b.id === idB);
+        if (!birdA || !birdB || !birdA.alive || !birdB.alive || birdA.hiding || birdB.hiding) {
+          matingTimers.delete(key);
+        }
+      });
+
+      const newBirds = [];
+      for (let i = 0; i < birds.length; i++) {
+        const birdA = birds[i];
+        if (!birdA.alive || birdA.hiding) continue;
+        for (let j = i + 1; j < birds.length; j++) {
+          const birdB = birds[j];
+          if (!birdB.alive || birdB.hiding) continue;
+
+          const key = birdA.id < birdB.id ? `${birdA.id}-${birdB.id}` : `${birdB.id}-${birdA.id}`;
+
+          if (birdA.matingCooldown > 0 || birdB.matingCooldown > 0) {
+            matingTimers.delete(key);
+            continue;
+          }
+
+          const dist = Math.hypot(birdA.x - birdB.x, birdA.y - birdB.y);
+          if (dist <= MATING_DISTANCE) {
+            const timer = (matingTimers.get(key) || 0) + 1;
+            if (timer >= MATING_REQUIRED_FRAMES) {
+              matingTimers.delete(key);
+              birdA.matingCooldown = MATING_COOLDOWN_FRAMES;
+              birdB.matingCooldown = MATING_COOLDOWN_FRAMES;
+              birdA.fitness += MATING_FITNESS_BONUS;
+              birdB.fitness += MATING_FITNESS_BONUS;
+
+              const chosenType = Math.random() < 0.5 ? birdA.type : birdB.type;
+              const childBrain = birdA.brain.crossover(birdB.brain, 0.5);
+              childBrain.mutate(BIRD_MUT_RATE * 0.5, BIRD_MUT_POWER * 0.5);
+              const hatchling = new Bird(chosenType, childBrain);
+              hatchling.x = (birdA.x + birdB.x) / 2;
+              hatchling.y = (birdA.y + birdB.y) / 2;
+              hatchling.vx = 0;
+              hatchling.vy = 0;
+              hatchling.lastIdlePos = { x: hatchling.x, y: hatchling.y };
+              hatchling.matingCooldown = MATING_COOLDOWN_FRAMES;
+              newBirds.push(hatchling);
+
+              for (let k = 0; k < 18; k++) {
+                particles.push(new Particle(hatchling.x, hatchling.y, '#FFD700'));
+              }
+            } else {
+              matingTimers.set(key, timer);
+            }
+          } else {
+            matingTimers.delete(key);
+          }
+        }
+      }
+
+      return newBirds;
+    }
+
     function step() {
       globalTime++;
       survivalTime++;
@@ -3277,7 +3385,12 @@
         b.think();
         b.update();
       });
-      
+
+      const hatchlings = handleBirdMating();
+      if (hatchlings.length > 0) {
+        hatchlings.forEach(b => birds.push(b));
+      }
+
       predators.forEach(p => p.update());
       
       particles = particles.filter(p => {
@@ -3296,6 +3409,18 @@
       
       const smallBirdsAlive = birds.some(b => b.alive);
       const predatorsAlive = predators.some(p => p.alive);
+
+      if (!smallBirdsAlive && predatorsAlive && !enemyWinAwarded && predators.length > 0 && globalTime > 100) {
+        enemyWinCount++;
+        enemyWinAwarded = true;
+        predators.forEach(p => {
+          p.fitness += ENEMY_WIN_FITNESS;
+          if (p.alive) {
+            p.energy = Math.min(p.maxEnergy, p.energy + ENEMY_WIN_ENERGY_BONUS);
+          }
+        });
+      }
+
       if (!smallBirdsAlive && !predatorsAlive && globalTime > 100) { // Small delay
         nextGeneration();
       }
@@ -3378,6 +3503,10 @@
       twigPile = []; // NYTT
       birdNest = null; // NYTT
       grassBlades = [];
+      enemyWinCount = 0;
+      enemyWinAwarded = false;
+      matingTimers.clear();
+      birdIdCounter = 0;
 
       telemetry.birdWallCrashes = 0; // @added
       telemetry.predWallCrashes = 0; // @added
