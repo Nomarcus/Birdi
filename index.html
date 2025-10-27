@@ -813,6 +813,59 @@
     }
     const TWIG_PILE_WIDTH = 220;
     const TWIG_PILE_HEIGHT = 120;
+
+    function generateSymmetricHidePositions(count) {
+      const positions = [];
+      if (count <= 0) return positions;
+
+      const rowConfigs = [
+        { y: 240, capacity: 5, spacing: 170 },
+        { y: 380, capacity: 6, spacing: 170 },
+        { y: 520, capacity: 6, spacing: 170 },
+        { y: 660, capacity: 6, spacing: 180 },
+        { y: 780, capacity: 4, spacing: 190 }
+      ];
+      const centerX = canvas.width / 2;
+
+      const buildRow = (y, amount, spacing) => {
+        const row = [];
+        if (amount <= 0) return row;
+
+        let placed = 0;
+        if (amount % 2 === 1) {
+          row.push({ x: centerX, y });
+          placed++;
+        }
+
+        let offset = amount % 2 === 1 ? spacing : spacing / 2;
+        while (placed < amount) {
+          row.push({ x: centerX - offset, y });
+          placed++;
+          if (placed < amount) {
+            row.push({ x: centerX + offset, y });
+            placed++;
+          }
+          offset += spacing;
+        }
+
+        row.sort((a, b) => a.x - b.x);
+        return row;
+      };
+
+      let remaining = count;
+      for (const config of rowConfigs) {
+        if (remaining <= 0) break;
+        const amount = Math.min(config.capacity, remaining);
+        positions.push(...buildRow(config.y, amount, config.spacing));
+        remaining -= amount;
+      }
+
+      while (positions.length < count) {
+        positions.push({ x: centerX, y: 320 + positions.length * 80 });
+      }
+
+      return positions.slice(0, count);
+    }
     let PLAYFIELD_OFFSET_X = 0;
     let PLAYFIELD_OFFSET_Y = 0;
     const INITIAL_FOOD_COUNT = 25;
@@ -1367,36 +1420,97 @@
         this.width = width;
         this.height = height;
         this.y = GROUND_Y - this.height;
-        this.canopyRadius = this.width * 2.5;
-        this.canopyCenterY = this.y - this.canopyRadius * 0.25;
-        this.trunkColor = '#5D4037';
-        this.canopyRingColor = `hsl(120, 55%, ${32 + Math.random() * 6}%)`;
-        this.canopyCoreColor = `hsl(90, 50%, ${60 + Math.random() * 8}%)`;
-        this.canopyOutlineColor = `hsl(120, 45%, ${24 + Math.random() * 6}%)`;
-        this.ringWidth = this.canopyRadius * 0.55;
+        this.centerX = this.x + this.width / 2;
+        this.trunkHeight = this.height * 0.45;
+        this.trunkWidth = Math.max(16, this.width * 0.55);
+        this.canopyHeight = this.height - this.trunkHeight;
+        this.canopyRadiusX = Math.max(this.trunkWidth * 1.4, this.width * 1.6);
+        this.canopyRadiusY = this.canopyHeight * 0.7;
+        this.canopyCenterY = this.y - this.canopyHeight * 0.2;
+        this.shadowWidth = this.canopyRadiusX * 1.4;
+        this.safeRadius = Math.max(this.canopyRadiusX * 0.7, this.trunkWidth) + 40;
+
+        const hue = 110 + Math.random() * 10;
+        this.leafLight = `hsl(${hue}, 55%, 62%)`;
+        this.leafMid = `hsl(${hue - 4}, 58%, 48%)`;
+        this.leafDark = `hsl(${hue - 10}, 52%, 34%)`;
+        this.trunkLight = '#c19a6b';
+        this.trunkDark = '#8b5a2b';
       }
+
+      overlapsHideSpot(spot) {
+        const dy = (this.y + this.trunkHeight * 0.4) - spot.y;
+        const dx = this.centerX - spot.x;
+        const dist = Math.hypot(dx, dy);
+        return dist < spot.radius + this.safeRadius;
+      }
+
+      overlapsTree(other) {
+        const dx = this.centerX - other.centerX;
+        const dy = (this.y + this.trunkHeight * 0.5) - (other.y + other.trunkHeight * 0.5);
+        const dist = Math.hypot(dx, dy);
+        return dist < this.safeRadius + other.safeRadius;
+      }
+
       draw() {
-        const centerX = this.x + this.width / 2;
+        ctx.save();
 
-        ctx.fillStyle = this.trunkColor;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-
-        ctx.strokeStyle = this.canopyRingColor;
-        ctx.lineWidth = this.ringWidth;
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
         ctx.beginPath();
-        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = this.canopyCoreColor;
-        ctx.beginPath();
-        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius * 0.35, 0, Math.PI * 2);
+        ctx.ellipse(this.centerX, GROUND_Y + 8, this.shadowWidth * 0.55, this.shadowWidth * 0.18, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = this.canopyOutlineColor;
-        ctx.lineWidth = 4;
+        const trunkX = this.centerX - this.trunkWidth / 2;
+        const trunkY = GROUND_Y - this.trunkHeight;
+        const trunkRadius = Math.min(12, this.trunkWidth / 3);
+        const trunkGrad = ctx.createLinearGradient(trunkX, trunkY, trunkX + this.trunkWidth, trunkY + this.trunkHeight);
+        trunkGrad.addColorStop(0, this.trunkLight);
+        trunkGrad.addColorStop(1, this.trunkDark);
+
+        ctx.fillStyle = trunkGrad;
         ctx.beginPath();
-        ctx.arc(centerX, this.canopyCenterY, this.canopyRadius - this.ringWidth / 2, 0, Math.PI * 2);
+        ctx.moveTo(trunkX + trunkRadius, trunkY);
+        ctx.lineTo(trunkX + this.trunkWidth - trunkRadius, trunkY);
+        ctx.quadraticCurveTo(trunkX + this.trunkWidth, trunkY, trunkX + this.trunkWidth, trunkY + trunkRadius);
+        ctx.lineTo(trunkX + this.trunkWidth, trunkY + this.trunkHeight - trunkRadius);
+        ctx.quadraticCurveTo(trunkX + this.trunkWidth, trunkY + this.trunkHeight, trunkX + this.trunkWidth - trunkRadius, trunkY + this.trunkHeight);
+        ctx.lineTo(trunkX + trunkRadius, trunkY + this.trunkHeight);
+        ctx.quadraticCurveTo(trunkX, trunkY + this.trunkHeight, trunkX, trunkY + this.trunkHeight - trunkRadius);
+        ctx.lineTo(trunkX, trunkY + trunkRadius);
+        ctx.quadraticCurveTo(trunkX, trunkY, trunkX + trunkRadius, trunkY);
+        ctx.closePath();
+        ctx.fill();
+
+        const canopyGrad = ctx.createRadialGradient(
+          this.centerX,
+          this.canopyCenterY - this.canopyRadiusY * 0.3,
+          this.canopyRadiusY * 0.3,
+          this.centerX,
+          this.canopyCenterY,
+          this.canopyRadiusX
+        );
+        canopyGrad.addColorStop(0, this.leafLight);
+        canopyGrad.addColorStop(0.5, this.leafMid);
+        canopyGrad.addColorStop(1, this.leafDark);
+
+        ctx.fillStyle = canopyGrad;
+        ctx.beginPath();
+        ctx.ellipse(this.centerX, this.canopyCenterY, this.canopyRadiusX, this.canopyRadiusY, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.beginPath();
+        ctx.ellipse(this.centerX, this.canopyCenterY - this.canopyRadiusY * 0.25, this.canopyRadiusX * 0.65, this.canopyRadiusY * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(34, 82, 52, 0.4)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.ellipse(this.centerX, this.canopyCenterY, this.canopyRadiusX, this.canopyRadiusY, 0, 0, Math.PI * 2);
         ctx.stroke();
+
+        ctx.restore();
       }
     }
     
@@ -1406,8 +1520,11 @@
         this.x = x;
         this.y = y;
         this.carriedBy = null;
-        this.angle = (Math.random() - 0.5) * 0.5;
-        this.length = 25 + Math.random() * 20;
+        this.angle = (Math.random() - 0.5) * 0.18;
+        this.length = 32 + Math.random() * 22;
+        this.thickness = 4 + Math.random() * 1.8;
+        this.palette = ['#B58863', '#A47148', '#8C5E34', '#C19A6B'];
+        this.color = this.palette[Math.floor(Math.random() * this.palette.length)];
       }
       draw() {
         if (this.carriedBy) return; // Drawn by the bird
@@ -1415,8 +1532,13 @@
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        const grad = ctx.createLinearGradient(-this.length / 2, 0, this.length / 2, 0);
+        grad.addColorStop(0, '#D8B384');
+        grad.addColorStop(0.45, this.color);
+        grad.addColorStop(1, '#6F4E37');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = this.thickness;
         ctx.beginPath();
         ctx.moveTo(-this.length / 2, 0);
         ctx.lineTo(this.length / 2, 0);
@@ -1424,7 +1546,40 @@
         ctx.restore();
       }
     }
-    
+
+    function drawTwigPileBase() {
+      if (!twigPile.length) return;
+
+      ctx.save();
+      ctx.translate(TWIG_PILE_X, TWIG_PILE_Y);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(0, 18, TWIG_PILE_WIDTH * 0.35, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const baseWidth = TWIG_PILE_WIDTH * 0.85;
+      const baseHeight = TWIG_PILE_HEIGHT * 0.55;
+      const pileGrad = ctx.createLinearGradient(-baseWidth / 2, -baseHeight, baseWidth / 2, 0);
+      pileGrad.addColorStop(0, 'rgba(194, 147, 88, 0.85)');
+      pileGrad.addColorStop(1, 'rgba(132, 87, 44, 0.92)');
+
+      ctx.fillStyle = pileGrad;
+      ctx.beginPath();
+      ctx.moveTo(-baseWidth / 2, -baseHeight * 0.2);
+      ctx.quadraticCurveTo(0, -baseHeight, baseWidth / 2, -baseHeight * 0.2);
+      ctx.lineTo(baseWidth / 2, 6);
+      ctx.quadraticCurveTo(0, baseHeight * 0.25, -baseWidth / 2, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(70, 40, 20, 0.35)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
     // NEW: Bird nest class
     class BirdNest {
       constructor(x, y) {
@@ -1460,87 +1615,93 @@
           badgeBaseY = spriteY + spriteHeight + 20;
           effectiveWidth = spriteWidth;
         } else {
-          const bodyWidth = this.radius * 1.3;
-          const bodyHeight = this.radius * 1.6;
-          const roofHeight = this.radius * 0.9;
+          const bodyWidth = this.radius * 1.28;
+          const bodyHeight = this.radius * 1.08;
           const bodyX = this.x - bodyWidth / 2;
-          const bodyY = this.y - bodyHeight * 0.45;
-
+          const bodyY = this.y - bodyHeight * 0.55;
+          const roofHeight = this.radius * 0.85;
           const poleWidth = bodyWidth * 0.18;
-          const groundContactY = GROUND_Y;
-          const poleHeight = Math.max(0, groundContactY - (bodyY + bodyHeight));
+          const poleHeight = Math.max(0, GROUND_Y - (bodyY + bodyHeight));
 
-          const shadowGrad = ctx.createLinearGradient(bodyX, bodyY - roofHeight, bodyX, bodyY + bodyHeight + poleHeight);
-          shadowGrad.addColorStop(0, 'rgba(0,0,0,0.08)');
-          shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = shadowGrad;
-          ctx.fillRect(bodyX - 10, bodyY - roofHeight, bodyWidth + 20, bodyHeight + poleHeight + 20);
+          ctx.fillStyle = 'rgba(0,0,0,0.16)';
+          ctx.beginPath();
+          ctx.ellipse(this.x, GROUND_Y + 6, bodyWidth * 0.5, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
 
-          ctx.fillStyle = '#8B5A2B';
           if (poleHeight > 0) {
+            const poleGrad = ctx.createLinearGradient(this.x, bodyY + bodyHeight, this.x, bodyY + bodyHeight + poleHeight);
+            poleGrad.addColorStop(0, '#d6b486');
+            poleGrad.addColorStop(1, '#a47946');
+            ctx.fillStyle = poleGrad;
             ctx.fillRect(this.x - poleWidth / 2, bodyY + bodyHeight, poleWidth, poleHeight);
           }
 
           const corner = bodyWidth * 0.12;
-          const bodyGradient = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyHeight);
-          bodyGradient.addColorStop(0, '#fdf9f3');
-          bodyGradient.addColorStop(1, '#e1d4c2');
+          const bodyGrad = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyHeight);
+          bodyGrad.addColorStop(0, '#fff7ec');
+          bodyGrad.addColorStop(1, '#e5d4bb');
 
+          ctx.fillStyle = bodyGrad;
+          ctx.strokeStyle = '#ccb89d';
+          ctx.lineWidth = 5;
           ctx.beginPath();
-          ctx.moveTo(bodyX, bodyY + corner);
-          ctx.quadraticCurveTo(bodyX, bodyY, bodyX + corner, bodyY);
+          ctx.moveTo(bodyX + corner, bodyY);
           ctx.lineTo(bodyX + bodyWidth - corner, bodyY);
           ctx.quadraticCurveTo(bodyX + bodyWidth, bodyY, bodyX + bodyWidth, bodyY + corner);
           ctx.lineTo(bodyX + bodyWidth, bodyY + bodyHeight - corner);
           ctx.quadraticCurveTo(bodyX + bodyWidth, bodyY + bodyHeight, bodyX + bodyWidth - corner, bodyY + bodyHeight);
           ctx.lineTo(bodyX + corner, bodyY + bodyHeight);
           ctx.quadraticCurveTo(bodyX, bodyY + bodyHeight, bodyX, bodyY + bodyHeight - corner);
+          ctx.lineTo(bodyX, bodyY + corner);
+          ctx.quadraticCurveTo(bodyX, bodyY, bodyX + corner, bodyY);
           ctx.closePath();
-          ctx.fillStyle = bodyGradient;
           ctx.fill();
-          ctx.strokeStyle = 'rgba(120, 90, 60, 0.35)';
-          ctx.lineWidth = 4;
           ctx.stroke();
 
-          const roofLeft = bodyX - bodyWidth * 0.12;
-          const roofRight = bodyX + bodyWidth + bodyWidth * 0.12;
-          const roofTop = bodyY - roofHeight;
-          const roofGradient = ctx.createLinearGradient(this.x, roofTop, this.x, bodyY);
-          roofGradient.addColorStop(0, '#f1b24a');
-          roofGradient.addColorStop(1, '#d9822b');
+          const roofGrad = ctx.createLinearGradient(bodyX, bodyY - roofHeight, bodyX, bodyY + 8);
+          roofGrad.addColorStop(0, '#ff8369');
+          roofGrad.addColorStop(1, '#d75c3d');
+          ctx.fillStyle = roofGrad;
+          ctx.strokeStyle = '#c44c31';
+          ctx.lineWidth = 6;
           ctx.beginPath();
-          ctx.moveTo(this.x, roofTop);
-          ctx.lineTo(roofLeft, bodyY + 6);
-          ctx.lineTo(roofRight, bodyY + 6);
+          ctx.moveTo(this.x, bodyY - roofHeight);
+          ctx.lineTo(bodyX - 18, bodyY + 6);
+          ctx.lineTo(bodyX + bodyWidth + 18, bodyY + 6);
           ctx.closePath();
-          ctx.fillStyle = roofGradient;
           ctx.fill();
-          ctx.strokeStyle = 'rgba(130, 80, 25, 0.6)';
-          ctx.lineWidth = 4;
           ctx.stroke();
 
-          const holeY = bodyY + bodyHeight * 0.42;
-          const holeRadius = bodyWidth * 0.22;
-          ctx.fillStyle = '#2f2a24';
-          ctx.beginPath();
-          ctx.arc(this.x, holeY, holeRadius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(this.x, holeY, holeRadius + 4, 0, Math.PI * 2);
-          ctx.stroke();
+          const trimHeight = bodyHeight * 0.18;
+          ctx.fillStyle = 'rgba(255,255,255,0.55)';
+          ctx.fillRect(bodyX + bodyWidth * 0.12, bodyY + trimHeight, bodyWidth - bodyWidth * 0.24, trimHeight * 0.35);
 
-          const perchY = bodyY + bodyHeight * 0.62;
-          const perchWidth = bodyWidth * 0.55;
-          ctx.fillStyle = '#b48248';
-          ctx.fillRect(this.x - perchWidth / 2, perchY, perchWidth, 6);
+          const doorY = bodyY + bodyHeight * 0.56;
+          const doorRadius = bodyWidth * 0.22;
+          ctx.fillStyle = '#3f2a1c';
           ctx.beginPath();
-          ctx.arc(this.x + perchWidth / 2, perchY + 3, 3, 0, Math.PI * 2);
+          ctx.arc(this.x, doorY, doorRadius, 0, Math.PI * 2);
           ctx.fill();
 
-          overlayCenterY = bodyY + bodyHeight * 0.8;
-          badgeBaseY = bodyY + bodyHeight + 20;
+          ctx.fillStyle = '#f0d5ad';
+          ctx.beginPath();
+          ctx.arc(this.x, doorY, doorRadius * 0.38, 0, Math.PI * 2);
+          ctx.fill();
+
+          const perchY = bodyY + bodyHeight * 0.74;
+          const perchWidth = bodyWidth * 0.5;
+          const perchHeight = bodyHeight * 0.09;
+          const perchGrad = ctx.createLinearGradient(this.x - perchWidth / 2, perchY, this.x + perchWidth / 2, perchY + perchHeight);
+          perchGrad.addColorStop(0, '#e0ba86');
+          perchGrad.addColorStop(1, '#ad7a42');
+          ctx.fillStyle = perchGrad;
+          ctx.fillRect(this.x - perchWidth / 2, perchY, perchWidth, perchHeight);
+
+          ctx.fillStyle = '#ad7a42';
+          ctx.fillRect(this.x + perchWidth / 2 - perchHeight * 0.35, perchY - perchHeight * 0.25, perchHeight * 0.7, perchHeight * 1.35);
+
+          overlayCenterY = bodyY + bodyHeight * 0.78;
+          badgeBaseY = bodyY + bodyHeight + poleHeight + 24;
           effectiveWidth = bodyWidth;
         }
 
@@ -1598,13 +1759,31 @@
 
     function regenerateTwigPile() {
       const newPile = [];
-      for (let i = 0; i < TWIG_PILE_COUNT; i++) {
-        const heightFactor = Math.random();
-        const twigY = TWIG_PILE_Y - heightFactor * TWIG_PILE_HEIGHT;
-        const twigX = TWIG_PILE_X + (Math.random() - 0.5) * TWIG_PILE_WIDTH * (0.7 + 0.3 * heightFactor);
-        newPile.push(new Twig(twigX, twigY));
+      const layers = Math.max(3, Math.round(Math.sqrt(TWIG_PILE_COUNT / 4)));
+      let remaining = TWIG_PILE_COUNT;
+
+      for (let layer = 0; layer < layers && remaining > 0; layer++) {
+        const layerFraction = layer / Math.max(1, layers - 1);
+        const baseCount = Math.max(3, Math.round(TWIG_PILE_COUNT / layers * (1 - layer * 0.1)));
+        const layerCount = Math.min(remaining, baseCount);
+        const y = TWIG_PILE_Y - layerFraction * TWIG_PILE_HEIGHT * 0.75;
+
+        for (let i = 0; i < layerCount; i++) {
+          const normalized = layerCount === 1 ? 0 : i / (layerCount - 1) - 0.5;
+          const spread = normalized * TWIG_PILE_WIDTH * (0.45 + (1 - layerFraction) * 0.25);
+          const jitter = (Math.random() - 0.5) * 18;
+          const twigX = TWIG_PILE_X + spread + jitter;
+          newPile.push(new Twig(twigX, y));
+        }
+
+        remaining = TWIG_PILE_COUNT - newPile.length;
       }
-      twigPile = newPile;
+
+      while (newPile.length < TWIG_PILE_COUNT) {
+        newPile.push(new Twig(TWIG_PILE_X + (Math.random() - 0.5) * TWIG_PILE_WIDTH * 0.4, TWIG_PILE_Y - Math.random() * TWIG_PILE_HEIGHT * 0.4));
+      }
+
+      twigPile = newPile.slice(0, TWIG_PILE_COUNT);
     }
 
     class Brain {
@@ -3091,27 +3270,42 @@
     // Init functions
     function initEnvironment() {
       hideSpots = [];
-      const hidePositions = [
-        {x: 250, y: 200}, {x: 400, y: 350}, {x: 200, y: 500},
-        {x: 550, y: 250}, {x: 650, y: 450}, {x: 450, y: 600},
-        {x: 350, y: 700}, {x: 800, y: 300}, {x: 900, y: 550},
-        {x: 750, y: 700}, {x: 300, y: 400}, {x: 600, y: 650},
-        {x: 500, y: 150}, {x: 700, y: 200}, {x: 850, y: 450}
-      ];
-      for (let i = 0; i < HIDE_SPOT_COUNT; i++) {
-        const pos = hidePositions[i % hidePositions.length];
-        hideSpots.push(new HideSpot(pos.x, pos.y));
-      }
+      const hidePositions = generateSymmetricHidePositions(HIDE_SPOT_COUNT);
+      hidePositions.forEach(pos => hideSpots.push(new HideSpot(pos.x, pos.y)));
       buildPredatorNests(PRED_COUNT);
-      
+
       // NEW: Init Trees
       trees = [];
       for (let i = 0; i < TREE_COUNT; i++) {
-        const treeWidth = 25 + Math.random() * 20;
-        const treeHeight = 150 + Math.random() * 300;
-        // Undvik kanter och fiendebon
-        const x = 200 + Math.random() * (canvas.width - 600); 
-        trees.push(new Tree(x, treeWidth, treeHeight));
+        let attempts = 0;
+        let placed = false;
+        while (attempts < 60 && !placed) {
+          const treeWidth = 26 + Math.random() * 22;
+          const treeHeight = 180 + Math.random() * 240;
+          const x = 140 + Math.random() * (canvas.width - 280 - treeWidth);
+          const candidate = new Tree(x, treeWidth, treeHeight);
+          const overlapsHide = hideSpots.some(h => candidate.overlapsHideSpot(h));
+          const overlapsTree = trees.some(t => candidate.overlapsTree(t));
+          if (!overlapsHide && !overlapsTree) {
+            trees.push(candidate);
+            placed = true;
+          }
+          attempts++;
+        }
+        if (!placed) {
+          let fallbackAttempts = 0;
+          while (fallbackAttempts < 40) {
+            const treeWidth = 26 + Math.random() * 22;
+            const treeHeight = 180 + Math.random() * 240;
+            const x = 140 + Math.random() * (canvas.width - 280 - treeWidth);
+            const fallback = new Tree(x, treeWidth, treeHeight);
+            if (!hideSpots.some(h => fallback.overlapsHideSpot(h))) {
+              trees.push(fallback);
+              break;
+            }
+            fallbackAttempts++;
+          }
+        }
       }
       
       // NYTT: Init Bo & Kvistar
@@ -3467,7 +3661,8 @@
       
       if (birdNest) birdNest.draw(); // NYTT
       trees.forEach(t => t.draw()); // NYTT
-      
+
+      drawTwigPileBase();
       // Draw twigs that are not carried
       twigPile.forEach(t => t.draw()); // NYTT
       
