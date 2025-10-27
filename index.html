@@ -600,6 +600,17 @@
   </div>
 
   <script>
+    // Prevent duplicate custom element definition errors from third-party scripts.
+    if (window.customElements && !window.__customElementDeduper) {
+      const originalDefine = window.customElements.define.bind(window.customElements);
+      window.customElements.define = function(name, constructor, options) {
+        if (!window.customElements.get(name)) {
+          originalDefine(name, constructor, options);
+        }
+      };
+      window.__customElementDeduper = true;
+    }
+
     const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
     const applyCollisionPenalty = (current, penalty, floor) => {
       const reduced = current - penalty;
@@ -2538,6 +2549,14 @@
         }); // @added
         this.attractX = attraction.x; // @added
         this.attractY = attraction.y; // @added
+
+        const frontRay = this.rayValues[0]; // @added
+        const leftRay = this.rayValues[1]; // @added
+        const rightRay = this.rayValues[2]; // @added
+        const flankRay = this.rayValues[3]; // @added
+        const rearLeftRay = this.rayValues[4]; // @added
+        const backRay = this.rayValues[5]; // @added
+        const forcedRecall = this.forcedReturn > 0; // @added
         telemetry.predStateTime[this.state] += 1; // @added
 
         if (wallDist < PRED_CORNER_WARN_DIST) {
