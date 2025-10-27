@@ -3419,6 +3419,9 @@
             p.energy = Math.min(p.maxEnergy, p.energy + ENEMY_WIN_ENERGY_BONUS);
           }
         });
+
+        nextGeneration();
+        return;
       }
 
       if (!smallBirdsAlive && !predatorsAlive && globalTime > 100) { // Small delay
