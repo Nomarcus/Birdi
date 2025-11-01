@@ -132,6 +132,25 @@
       background: linear-gradient(180deg, #9cd8ff, #6f9ee6 40%, #5a86d1 60%, #1d356b 100%);
     }
 
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(18, 24, 40, 0.8);
+      border-radius: 16px;
+      border: 1px solid rgba(125, 141, 255, 0.28);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .toggle input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
     .stats {
       width: min(1100px, 96vw);
       display: grid;
@@ -185,6 +204,10 @@
       <input type="range" id="speedSlider" min="0.25" max="4" step="0.25" value="1">
       <span class="speed-value" id="speedDisplay">1×</span>
     </div>
+    <label class="toggle">
+      <input type="checkbox" id="chkEnergyDeath">
+      <span>Död vid energibrist</span>
+    </label>
   </div>
 
   <canvas id="canvas" width="1100" height="680"></canvas>
@@ -205,6 +228,10 @@
     <div class="stat">
       <span class="label">Överlevnad</span>
       <span class="value" id="statTime">0.0 s</span>
+    </div>
+    <div class="stat">
+      <span class="label">Fitness</span>
+      <span class="value" id="statFitness">0</span>
     </div>
     <div class="stat">
       <span class="label">Bästa tiden</span>
@@ -245,7 +272,17 @@
       boundaryStrength: 260,
       enemyTurnSpeed: 320,
       captureRadius: 16,
-      padding: 60
+      padding: 60,
+      maxEnergy: 100,
+      energyDrainPerSecond: 6,
+      energyRechargePerSecond: 18,
+      energyLowThreshold: 0.45,
+      energyNestAttraction: 220,
+      energyDeathPenalty: 120,
+      survivalFitnessRate: 2.4,
+      wallSensorRange: 160,
+      wallSensorStrength: 220,
+      nestRadius: 90
     };
 
     const state = {
@@ -256,7 +293,9 @@
       bestTime: 0,
       paused: false,
       speed: 1,
-      resetting: false
+      resetting: false,
+      dieOnEnergyLoss: false,
+      fitness: 0
     };
 
     const elements = {
@@ -267,8 +306,18 @@
       best: document.getElementById('statBest'),
       pause: document.getElementById('btnPause'),
       speedSlider: document.getElementById('speedSlider'),
-      speedDisplay: document.getElementById('speedDisplay')
+      speedDisplay: document.getElementById('speedDisplay'),
+      energyDeathToggle: document.getElementById('chkEnergyDeath'),
+      fitness: document.getElementById('statFitness')
     };
+
+    const nest = {
+      x: baseWidth * 0.5,
+      y: baseHeight * 0.82,
+      radius: config.nestRadius
+    };
+
+    state.dieOnEnergyLoss = elements.energyDeathToggle.checked;
 
     class Bird {
       constructor(x, y) {
@@ -280,13 +329,43 @@
         this.vy = Math.sin(angle) * speed;
         this.alive = true;
         this.wanderTimer = Math.random() * Math.PI * 2;
+        this.energy = config.maxEnergy;
+        this.sensors = {
+          wallLeft: 0,
+          wallRight: 0,
+          wallTop: 0,
+          wallBottom: 0,
+          enemyDistance: 1,
+          enemyDirectionX: 0,
+          enemyDirectionY: 0,
+          nestDirectionX: 0,
+          nestDirectionY: 0,
+          nestDistance: 0,
+          energyRatio: 1
+        };
       }
 
-      update(delta, birds, enemies) {
-        if (!this.alive) return;
+      update(delta, birds, enemies, simState) {
+        if (!this.alive) return { energyDeath: false };
 
         let ax = 0;
         let ay = 0;
+
+        const { padding } = config;
+        const range = config.wallSensorRange;
+        const leftDistance = this.x - padding;
+        const rightDistance = baseWidth - padding - this.x;
+        const topDistance = this.y - padding;
+        const bottomDistance = baseHeight - padding - this.y;
+        const leftSensor = leftDistance < range ? 1 - leftDistance / range : 0;
+        const rightSensor = rightDistance < range ? 1 - rightDistance / range : 0;
+        const topSensor = topDistance < range ? 1 - topDistance / range : 0;
+        const bottomSensor = bottomDistance < range ? 1 - bottomDistance / range : 0;
+
+        if (leftSensor > 0) ax += config.wallSensorStrength * leftSensor;
+        if (rightSensor > 0) ax -= config.wallSensorStrength * rightSensor;
+        if (topSensor > 0) ay += config.wallSensorStrength * topSensor;
+        if (bottomSensor > 0) ay -= config.wallSensorStrength * bottomSensor;
 
         // Separation & cohesion
         let separationCount = 0;
@@ -369,7 +448,6 @@
         }
 
         // Keep inside the world
-        const { padding } = config;
         if (this.x < padding) ax += config.boundaryStrength;
         else if (this.x > baseWidth - padding) ax -= config.boundaryStrength;
         if (this.y < padding) ay += config.boundaryStrength;
@@ -379,6 +457,46 @@
         this.wanderTimer += delta * 2;
         ax += Math.cos(this.wanderTimer) * config.wanderStrength;
         ay += Math.sin(this.wanderTimer) * config.wanderStrength;
+
+        const nestDx = nest.x - this.x;
+        const nestDy = nest.y - this.y;
+        const nestDist = Math.hypot(nestDx, nestDy);
+        const nestDirX = nestDist > 0 ? nestDx / nestDist : 0;
+        const nestDirY = nestDist > 0 ? nestDy / nestDist : 0;
+
+        this.energy = Math.max(0, this.energy - config.energyDrainPerSecond * delta);
+        if (nestDist < nest.radius) {
+          this.energy = Math.min(
+            config.maxEnergy,
+            this.energy + config.energyRechargePerSecond * delta
+          );
+        }
+
+        const energyRatio = this.energy / config.maxEnergy;
+        if (energyRatio < config.energyLowThreshold) {
+          const urgency = (config.energyLowThreshold - energyRatio) / config.energyLowThreshold;
+          ax += nestDirX * config.energyNestAttraction * urgency;
+          ay += nestDirY * config.energyNestAttraction * urgency;
+        }
+
+        this.sensors = {
+          wallLeft: leftSensor,
+          wallRight: rightSensor,
+          wallTop: topSensor,
+          wallBottom: bottomSensor,
+          enemyDistance: nearestDist === Infinity ? 1 : Math.min(1, nearestDist / config.enemySenseRadius),
+          enemyDirectionX: nearestEnemy ? (nearestEnemy.x - this.x) / Math.max(1, nearestDist) : 0,
+          enemyDirectionY: nearestEnemy ? (nearestEnemy.y - this.y) / Math.max(1, nearestDist) : 0,
+          nestDirectionX: nestDirX,
+          nestDirectionY: nestDirY,
+          nestDistance: Math.min(1, nestDist / Math.hypot(baseWidth, baseHeight)),
+          energyRatio
+        };
+
+        if (simState?.dieOnEnergyLoss && this.energy <= 0) {
+          this.alive = false;
+          return { energyDeath: true };
+        }
 
         this.vx += ax * delta;
         this.vy += ay * delta;
@@ -395,6 +513,7 @@
         this.y += this.vy * delta;
         this.x = Math.max(padding, Math.min(baseWidth - padding, this.x));
         this.y = Math.max(padding, Math.min(baseHeight - padding, this.y));
+        return { energyDeath: false };
       }
 
       draw(ctx) {
@@ -419,6 +538,12 @@
         ctx.moveTo(-4, 2);
         ctx.lineTo(-12, 16);
         ctx.stroke();
+
+        ctx.fillStyle = 'rgba(4, 6, 14, 0.6)';
+        ctx.fillRect(-12, 14, 24, 5);
+        const ratio = Math.max(0, Math.min(1, this.energy / config.maxEnergy));
+        ctx.fillStyle = ratio > 0.5 ? '#7ce0a7' : ratio > 0.25 ? '#ffe27a' : '#ff6f91';
+        ctx.fillRect(-12, 14, 24 * ratio, 5);
 
         ctx.restore();
       }
@@ -536,6 +661,7 @@
       state.birds = Array.from({ length: config.birdCount }, spawnBird);
       state.enemies = Array.from({ length: config.enemyCount }, spawnEnemy);
       state.survivalTime = 0;
+      state.fitness = 0;
       state.resetting = false;
       state.paused = false;
       elements.pause.textContent = '⏸️ Pausa';
@@ -549,6 +675,7 @@
       elements.generation.textContent = state.generation;
       elements.time.textContent = `${state.survivalTime.toFixed(1)} s`;
       elements.best.textContent = `${state.bestTime.toFixed(1)} s`;
+      elements.fitness.textContent = Math.round(state.fitness);
     }
 
     let lastTime = performance.now();
@@ -564,8 +691,12 @@
 
       const delta = rawDelta * state.speed;
       const hadLivingBird = state.birds.some(bird => bird.alive);
+      let energyDeaths = 0;
       for (const bird of state.birds) {
-        bird.update(delta, state.birds, state.enemies);
+        const result = bird.update(delta, state.birds, state.enemies, state);
+        if (result?.energyDeath) {
+          energyDeaths += 1;
+        }
       }
 
       for (const enemy of state.enemies) {
@@ -576,8 +707,16 @@
         state.survivalTime += delta;
       }
 
-      const aliveBirds = state.birds.some(bird => bird.alive);
-      if (!aliveBirds && !state.resetting) {
+      const aliveBirds = state.birds.filter(bird => bird.alive);
+      const aliveCount = aliveBirds.length;
+      if (aliveCount > 0) {
+        state.fitness += aliveCount * delta * config.survivalFitnessRate;
+      }
+      if (energyDeaths > 0) {
+        state.fitness -= energyDeaths * config.energyDeathPenalty;
+      }
+
+      if (aliveCount === 0 && !state.resetting) {
         state.resetting = true;
         state.bestTime = Math.max(state.bestTime, state.survivalTime);
         updateStats();
@@ -608,6 +747,23 @@
       ctx.moveTo(0, baseHeight * 0.55);
       ctx.lineTo(baseWidth, baseHeight * 0.55);
       ctx.stroke();
+
+      // nest indicator
+      ctx.save();
+      ctx.translate(nest.x, nest.y);
+      const nestGradient = ctx.createRadialGradient(0, 0, nest.radius * 0.2, 0, 0, nest.radius);
+      nestGradient.addColorStop(0, 'rgba(255, 226, 122, 0.55)');
+      nestGradient.addColorStop(1, 'rgba(120, 78, 26, 0.08)');
+      ctx.fillStyle = nestGradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, nest.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(245, 194, 114, 0.6)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, nest.radius * 0.6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
 
       // soft sun
       const sunGradient = ctx.createRadialGradient(baseWidth * 0.75, baseHeight * 0.28, 0, baseWidth * 0.75, baseHeight * 0.28, 110);
@@ -657,6 +813,10 @@
         .replace(/\.00$/, '')
         .replace(/(\.\d)0$/, '$1');
       elements.speedDisplay.textContent = `${text}×`;
+    });
+
+    elements.energyDeathToggle.addEventListener('change', event => {
+      state.dieOnEnergyLoss = event.target.checked;
     });
 
     window.addEventListener('resize', () => {
